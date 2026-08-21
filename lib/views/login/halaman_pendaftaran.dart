@@ -4,8 +4,8 @@ import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/model/login_user_model.dart';
 import 'package:fodos/views/login/halaman_login.dart';
-import 'package:fodos/views/home/widget_method.dart';
-import 'package:fodos/constants/App_images.dart';
+import 'package:fodos/widgets/widget_method.dart';
+import 'package:fodos/constants/app_images.dart';
 
 class HalamanPendaftaranFodos extends StatefulWidget {
   const HalamanPendaftaranFodos({super.key});
@@ -236,22 +236,25 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
                     ),
                   ),
                   SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Sudah punya akun?"),
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            context.pop(HalamanLoginFodos());
-                          });
-                        },
-                        child: Text(
-                          "Masuk",
-                          style: TextStyle(color: AppColors.secondary),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text("Sudah punya akun?"),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              context.pop(HalamanLoginFodos());
+                            });
+                          },
+                          child: const Text(
+                            "Masuk",
+                            style: TextStyle(color: AppColors.secondary),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),

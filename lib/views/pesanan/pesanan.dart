@@ -24,7 +24,7 @@ class _PesananTugas12State extends State<PesananTugas12> {
 
   Future<void> _loadUser() async {
     try {
-      final email = await PreferenceHandler.getUserEmail();
+      final email = PreferenceHandler.getUserEmail();
       if (email != null) {
         final user = await DBHelper().getUserByEmail(email);
         if (user != null && user.id != null) {

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fodos/constants/App_images.dart';
+import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
@@ -22,7 +22,8 @@ class _SplashScreenTugas12State extends State<SplashScreenTugas12> {
   }
 
   void goToLogin() async {
-    await Future.delayed(const Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
     if (PreferenceHandler.isLogin == true) {
       context.pushAndRemoveAll(const BottomNavTugas12());
     } else {
@@ -34,23 +35,28 @@ class _SplashScreenTugas12State extends State<SplashScreenTugas12> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primary,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            SizedBox(height: 100),
-            Container(
-              height: 200,
-              width: 200,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(100),
-                color: Colors.black,
-                image: DecorationImage(image: AssetImage(AppImages.logo), fit: BoxFit.fill),
-              ),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                Container(
+                  height: 180,
+                  width: 180,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(90),
+                    color: Colors.black,
+                    image: DecorationImage(image: AssetImage(AppImages.logo), fit: BoxFit.fill),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Lottie.asset("assets/lottie animations/loading (1).json", height: 160),
+                const SizedBox(height: 20),
+              ],
             ),
-
-            Lottie.asset("assets/lottie animations/loading (1).json", height: 200),
-          ],
+          ),
         ),
       ),
     );

@@ -9,7 +9,7 @@ import 'package:fodos/views/profile/profil_alamat.dart';
 import 'package:fodos/views/profile/profil_keamanan.dart';
 import 'package:fodos/views/profile/profil_metode_pembayaran.dart';
 import 'package:fodos/views/profile/profil_tentang_aplikasi.dart';
-import 'package:fodos/views/profile/widget_profile.dart';
+import 'package:fodos/widgets/widget_profile.dart';
 
 class ProfileTugas12 extends StatefulWidget {
   const ProfileTugas12({super.key});
@@ -53,12 +53,11 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
         automaticallyImplyLeading: false,
         title: const Row(
           children: [
-            Icon(Icons.location_on, color: AppColors.primary, size: 24),
             SizedBox(width: 8),
             Text(
-              "FODOS",
+              "Pengaturan",
               style: TextStyle(
-                color: AppColors.primary,
+                color: AppColors.textDark,
                 fontWeight: FontWeight.bold,
                 fontSize: 22,
                 letterSpacing: -0.5,

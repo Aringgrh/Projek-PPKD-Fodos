@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/service/preferencehandler.dart';
-import 'package:fodos/views/splash_screen.dart';
+import 'package:fodos/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/database/db_helper.dart';
+import 'package:fodos/extention/extention.dart';
 import 'package:fodos/model/login_user_model.dart';
 import 'package:fodos/service/preferencehandler.dart';
-import 'package:fodos/views/profile/widget_informasi_pribadi.dart';
+import 'package:fodos/views/profile/profil_keamanan.dart';
+import 'package:fodos/widgets/widget_informasi_pribadi.dart';
 
 class InformasiPribadi extends StatefulWidget {
   const InformasiPribadi({super.key});
@@ -120,17 +122,11 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
         ),
         title: const Text(
           "Informasi Pribadi",
-          style: TextStyle(
-            color: AppColors.primary,
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+          style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 20),
         ),
       ),
       body: isLoading
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.secondary),
-            )
+          ? const Center(child: CircularProgressIndicator(color: AppColors.secondary))
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Column(
@@ -147,10 +143,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: const Color(0xFFEDEEEF),
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 4,
-                                ),
+                                border: Border.all(color: Colors.white, width: 4),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.08),
@@ -159,11 +152,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                                   ),
                                 ],
                               ),
-                              child: const Icon(
-                                Icons.person,
-                                size: 70,
-                                color: AppColors.primary,
-                              ),
+                              child: const Icon(Icons.person, size: 70, color: AppColors.primary),
                             ),
                           ],
                         ),
@@ -179,10 +168,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                         const SizedBox(height: 4),
                         Text(
                           "Lengkapi profil untuk pengalaman terbaik",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                         ),
                       ],
                     ),
@@ -263,68 +249,52 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                         ),
                       ],
                     ),
-                    child: Column(
-                      children: [
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 4,
-                          ),
-                          leading: const Icon(
-                            Icons.lock_outline,
-                            color: Color(0xFF404941),
-                          ),
-                          title: const Text(
-                            "Ubah Kata Sandi",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF191C1D),
-                            ),
-                          ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.grey,
-                          ),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Fitur Ubah Kata Sandi dipilih'),
+                    child: Material(
+                      color: Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            leading: const Icon(Icons.lock_outline, color: Color(0xFF404941)),
+                            title: const Text(
+                              "Ubah Kata Sandi",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF191C1D),
                               ),
-                            );
-                          },
-                        ),
-                        const Divider(height: 1, indent: 20, endIndent: 20),
-                        ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 4,
-                          ),
-                          leading: const Icon(
-                            Icons.verified_user_outlined,
-                            color: Color(0xFF404941),
-                          ),
-                          title: const Text(
-                            "Verifikasi Akun",
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: Color(0xFF191C1D),
                             ),
+                            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                            onTap: () {
+                              context.push(ProfilKeamanan());
+                            },
                           ),
-                          trailing: const Icon(
-                            Icons.chevron_right,
-                            color: Colors.grey,
-                          ),
-                          onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Fitur Verifikasi Akun dipilih'),
+                          const Divider(height: 1, indent: 20, endIndent: 20),
+                          ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                            leading: const Icon(
+                              Icons.verified_user_outlined,
+                              color: Color(0xFF404941),
+                            ),
+                            title: const Text(
+                              "Verifikasi Akun",
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: Color(0xFF191C1D),
                               ),
-                            );
-                          },
-                        ),
-                      ],
+                            ),
+                            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Fitur Verifikasi Akun dipilih')),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
                     ),
                   ),
 
@@ -347,9 +317,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.secondary,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                       elevation: 4,
                     ),
                     onPressed: isSaving ? null : _saveChanges,
@@ -368,19 +336,13 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                               SizedBox(width: 10),
                               Text(
                                 "Menyimpan...",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                               ),
                             ],
                           )
                         : const Text(
                             "Simpan Perubahan",
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),

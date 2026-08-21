@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/constants/display_produk.dart';
+import 'package:fodos/widgets/widget_display_produk.dart';
 import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/model/produk_model.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
@@ -35,12 +35,14 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
   Future<void> _fetchProducts() async {
     try {
       final products = await DBHelper().getAllProduk();
+      if (!mounted) return;
       setState(() {
         _allProduk = products;
         _filteredProduk = products;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });

@@ -22,7 +22,7 @@ class _HalamanFavoritState extends State<HalamanFavorit> {
   }
 
   Future<void> _loadUser() async {
-    final email = await PreferenceHandler.getUserEmail();
+    final email = PreferenceHandler.getUserEmail();
     if (email != null) {
       final user = await DBHelper().getUserByEmail(email);
       if (user != null && user.id != null) {

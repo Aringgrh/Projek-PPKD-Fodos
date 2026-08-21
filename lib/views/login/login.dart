@@ -5,7 +5,8 @@ import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
-import 'package:fodos/constants/App_images.dart';
+import 'package:fodos/constants/app_images.dart';
+import 'package:fodos/widgets/widget_login.dart';
 
 class HalamanLoginTugas12 extends StatefulWidget {
   const HalamanLoginTugas12({super.key});
@@ -100,7 +101,7 @@ class _HalamanLoginTugas12State extends State<HalamanLoginTugas12> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
+                            color: Colors.black.withValues(alpha: 0.08),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -330,7 +331,7 @@ class _HalamanLoginTugas12State extends State<HalamanLoginTugas12> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildSocialButton(
+                        child: buildSocialButton(
                           iconPath: "assets/images/google.png",
                           label: "Google",
                           onTap: () {},
@@ -338,7 +339,7 @@ class _HalamanLoginTugas12State extends State<HalamanLoginTugas12> {
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: _buildSocialButton(
+                        child: buildSocialButton(
                           iconPath: "assets/images/fbIcon.png",
                           label: "Facebook",
                           onTap: () {},
@@ -378,59 +379,6 @@ class _HalamanLoginTugas12State extends State<HalamanLoginTugas12> {
                 ],
               ),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSocialButton({
-    required String iconPath,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                iconPath,
-                width: 24,
-                height: 24,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.account_circle,
-                  color: AppColors.textGrey,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
           ),
         ),
       ),

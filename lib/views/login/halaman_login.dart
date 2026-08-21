@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:fodos/constants/App_images.dart';
+import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
+import 'package:fodos/widgets/widget_login.dart';
 
 class HalamanLoginFodos extends StatefulWidget {
   const HalamanLoginFodos({super.key});
@@ -280,7 +281,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildSocialButton(
+                        child: buildSocialHButton(
                           iconPath: "assets/images/google.png",
                           label: "Google",
                           onTap: () {},
@@ -288,7 +289,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                       ),
                       const SizedBox(width: 14),
                       Expanded(
-                        child: _buildSocialButton(
+                        child: buildSocialHButton(
                           iconPath: "assets/images/fbIcon.png",
                           label: "Facebook",
                           onTap: () {},
@@ -299,27 +300,30 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   const SizedBox(height: 32),
 
                   // Register Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Belum punya akun? ",
-                        style: TextStyle(color: AppColors.textGrey, fontSize: 14),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          context.push(const HalamanPendaftaranFodos());
-                        },
-                        child: Text(
-                          "Daftar Sekarang",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                            fontSize: 14,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "Belum punya akun? ",
+                          style: TextStyle(color: AppColors.textGrey, fontSize: 14),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            context.push(const HalamanPendaftaranFodos());
+                          },
+                          child: Text(
+                            "Daftar Sekarang",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
                 ],
@@ -331,53 +335,5 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     );
   }
 
-  Widget _buildSocialButton({
-    required String iconPath,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      height: 50,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: onTap,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                iconPath,
-                width: 24,
-                height: 24,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.account_circle, color: AppColors.textGrey, size: 24),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textDark,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 }

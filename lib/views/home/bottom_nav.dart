@@ -60,7 +60,7 @@ class _BottomNavTugas12State extends State<BottomNavTugas12> {
           GButton(
             icon: Icons.person_outline,
             iconActiveColor: Colors.white,
-            text: ("Profil"),
+            text: ("Pengaturan"),
             textColor: Colors.white,
             backgroundColor: AppColors.secondary,
           ),

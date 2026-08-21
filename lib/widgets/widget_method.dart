@@ -38,7 +38,16 @@ TextFormField textInputan(
 Row judulTextfield(String judul) {
   return Row(
     mainAxisAlignment: MainAxisAlignment.start,
-    children: [Text(judul, style: TextStyle(fontWeight: FontWeight.bold))],
+    children: [
+      Flexible(
+        child: Text(
+          judul,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ],
   );
 }
 //  TextFormField textInput(

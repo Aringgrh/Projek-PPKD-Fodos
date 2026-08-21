@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/constants/carousel.dart';
-import 'package:fodos/constants/display_produk.dart';
+import 'package:fodos/widgets/widget_carousel.dart';
+import 'package:fodos/widgets/widget_display_produk.dart';
 import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/model/produk_model.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
 import 'package:fodos/views/home/halaman_favorit.dart';
 import 'package:fodos/views/home/halaman_keranjang.dart';
-import 'package:fodos/views/home/widget_home.dart';
+import 'package:fodos/widgets/widget_home.dart';
 
 class HomeFodos extends StatefulWidget {
   const HomeFodos({super.key});
@@ -57,44 +57,50 @@ class _HomeFodosState extends State<HomeFodos> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     // Location Info
-                    InkWell(
-                      onTap: () {},
-                      borderRadius: BorderRadius.circular(8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: const [
-                              Icon(
-                                Icons.location_on,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                "Jl. Sudirman No. 45",
-                                style: AppTextstyle.heading1,
-                              ),
-                              SizedBox(width: 2),
-                              Icon(
-                                Icons.keyboard_arrow_down,
-                                color: AppColors.textGrey,
-                                size: 20,
-                              ),
-                            ],
-                          ),
-                          const Padding(
-                            padding: EdgeInsets.only(left: 24),
-                            child: Text(
-                              "Sekitar kamu",
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textGrey,
-                                fontWeight: FontWeight.w500,
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {},
+                        borderRadius: BorderRadius.circular(8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: const [
+                                Icon(
+                                  Icons.location_on,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    "Jl. Sudirman No. 45",
+                                    style: AppTextstyle.heading1,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                SizedBox(width: 2),
+                                Icon(
+                                  Icons.keyboard_arrow_down,
+                                  color: AppColors.textGrey,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.only(left: 24),
+                              child: Text(
+                                "Sekitar kamu",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textGrey,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
 
@@ -231,10 +237,15 @@ class _HomeFodosState extends State<HomeFodos> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      "Paling Diminati di Sekitarmu",
-                      style: AppTextstyle.sectionTitle,
+                    const Expanded(
+                      child: Text(
+                        "Paling Diminati di Sekitarmu",
+                        style: AppTextstyle.sectionTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
                     TextButton(
                       onPressed: () {},
                       style: TextButton.styleFrom(

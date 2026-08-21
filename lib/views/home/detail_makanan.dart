@@ -28,16 +28,17 @@ class _DetailMakananState extends State<DetailMakanan> {
   }
 
   Future<void> _loadUserAndFavoriteStatus() async {
-    final email = await PreferenceHandler.getUserEmail();
+    final email = PreferenceHandler.getUserEmail();
     if (email != null) {
       final user = await DBHelper().getUserByEmail(email);
-      if (user != null && user.id != null) {
+      if (user != null && user.id != null && mounted) {
         setState(() {
           userId = user.id!;
         });
       }
     }
     final favStatus = await DBHelper().isFavorit(userId, widget.produk.id ?? 0);
+    if (!mounted) return;
     setState(() {
       isFavorite = favStatus;
     });
@@ -49,21 +50,13 @@ class _DetailMakananState extends State<DetailMakanan> {
       await DBHelper().deleteFavorit(userId, produkId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Dihapus dari Favorit'),
-          duration: Duration(seconds: 1),
-        ),
+        const SnackBar(content: Text('Dihapus dari Favorit'), duration: Duration(seconds: 1)),
       );
     } else {
-      await DBHelper().insertFavorit(
-        FavoritModel(userId: userId, produkId: produkId),
-      );
+      await DBHelper().insertFavorit(FavoritModel(userId: userId, produkId: produkId));
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ditambahkan ke Favorit'),
-          duration: Duration(seconds: 1),
-        ),
+        const SnackBar(content: Text('Ditambahkan ke Favorit'), duration: Duration(seconds: 1)),
       );
     }
     setState(() {
@@ -105,9 +98,9 @@ class _DetailMakananState extends State<DetailMakanan> {
       }
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Gagal memasukkan ke keranjang')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Gagal memasukkan ke keranjang')));
       }
     }
   }
@@ -217,10 +210,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 24.0,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -228,29 +218,29 @@ class _DetailMakananState extends State<DetailMakanan> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.storefront,
-                                size: 16,
-                                color: AppColors.primary,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                widget.produk.namaToko,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(Icons.storefront, size: 16, color: AppColors.primary),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    widget.produk.namaToko,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
+                              ],
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -284,11 +274,11 @@ class _DetailMakananState extends State<DetailMakanan> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
+                          Expanded(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
                                 'Rp ${rawPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
                                 style: const TextStyle(
                                   fontSize: 22,
@@ -296,13 +286,11 @@ class _DetailMakananState extends State<DetailMakanan> {
                                   color: AppColors.secondary,
                                 ),
                               ),
-                            ],
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
                             ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
                               color: AppColors.badgeBg,
                               borderRadius: BorderRadius.circular(8),
@@ -350,14 +338,19 @@ class _DetailMakananState extends State<DetailMakanan> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Rating & Ulasan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textDark,
+                          const Expanded(
+                            child: Text(
+                              'Rating & Ulasan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Row(
                             children: const [
                               Icon(Icons.star, color: Colors.amber, size: 18),
@@ -373,10 +366,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                               SizedBox(width: 4),
                               Text(
                                 '(124 ulasan)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textGrey,
-                                ),
+                                style: TextStyle(fontSize: 12, color: AppColors.textGrey),
                               ),
                             ],
                           ),
@@ -391,9 +381,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,38 +391,15 @@ class _DetailMakananState extends State<DetailMakanan> {
                               children: const [
                                 Text(
                                   'Ahmad Subarjo',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                                 Row(
                                   children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
                                   ],
                                 ),
                               ],
@@ -442,10 +407,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                             const SizedBox(height: 6),
                             const Text(
                               'Makanannya masih sangat fresh! Rasanya enak banget dan porsinya masih bagus sekali. Worth it!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textGrey,
-                              ),
+                              style: TextStyle(fontSize: 12, color: AppColors.textGrey),
                             ),
                           ],
                         ),
@@ -455,9 +417,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
+                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -467,38 +427,15 @@ class _DetailMakananState extends State<DetailMakanan> {
                               children: const [
                                 Text(
                                   'Siti Rahma',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                                 ),
                                 Row(
                                   children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.grey,
-                                      size: 12,
-                                    ),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(Icons.star, color: Colors.grey, size: 12),
                                   ],
                                 ),
                               ],
@@ -506,10 +443,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                             const SizedBox(height: 6),
                             const Text(
                               'Penyelamatan yang sangat berharga! Hemat banget harganya untuk kualitas donat/makanan seperti ini.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textGrey,
-                              ),
+                              style: TextStyle(fontSize: 12, color: AppColors.textGrey),
                             ),
                           ],
                         ),
@@ -541,18 +475,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
+                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
                       ],
                     ),
-                    child: const Icon(
-                      Icons.arrow_back,
-                      color: AppColors.textDark,
-                      size: 20,
-                    ),
+                    child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
                   ),
                 ),
 
@@ -565,11 +491,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 6,
-                          offset: Offset(0, 2),
-                        ),
+                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
                       ],
                     ),
                     child: Icon(
@@ -589,10 +511,7 @@ class _DetailMakananState extends State<DetailMakanan> {
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 16.0,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -661,12 +580,20 @@ class _DetailMakananState extends State<DetailMakanan> {
                         ),
 
                         // Total Price display
-                        Text(
-                          'Total: Rp ${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.secondary,
+                        Expanded(
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'Total: Rp ${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                ),
+                              ),
+                            ),
                           ),
                         ),
                       ],
@@ -680,23 +607,14 @@ class _DetailMakananState extends State<DetailMakanan> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _addToCart,
-                            icon: const Icon(
-                              Icons.shopping_cart_outlined,
-                              size: 18,
-                            ),
+                            icon: const Icon(Icons.shopping_cart_outlined, size: 18),
                             label: const Text(
                               'Ke Keranjang',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.secondary,
-                              side: const BorderSide(
-                                color: AppColors.secondary,
-                                width: 1.5,
-                              ),
+                              side: const BorderSide(color: AppColors.secondary, width: 1.5),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(50),
@@ -713,10 +631,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                             icon: const Icon(Icons.flash_on, size: 18),
                             label: const Text(
                               'Pesan Sekarang',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,
