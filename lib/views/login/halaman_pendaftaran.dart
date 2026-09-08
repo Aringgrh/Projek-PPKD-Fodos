@@ -1,11 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
-import 'package:fodos/model/login_user_model.dart';
+import 'package:fodos/models/user_model.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/widgets/widget_method.dart';
-import 'package:fodos/constants/app_images.dart';
 
 class HalamanPendaftaranFodos extends StatefulWidget {
   const HalamanPendaftaranFodos({super.key});
@@ -17,19 +18,34 @@ class HalamanPendaftaranFodos extends StatefulWidget {
 
 class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
   bool hide = true;
-  TextEditingController namaC = TextEditingController();
-  TextEditingController nomorC = TextEditingController();
-  TextEditingController emailC = TextEditingController();
-  TextEditingController passC = TextEditingController();
-  TextEditingController konfirmC = TextEditingController();
-  TextEditingController alamatC = TextEditingController();
+  bool hideConfirm = true;
+  bool isLoading = false;
+
+  final TextEditingController namaC = TextEditingController();
+  final TextEditingController nomorC = TextEditingController();
+  final TextEditingController emailC = TextEditingController();
+  final TextEditingController passC = TextEditingController();
+  final TextEditingController konfirmC = TextEditingController();
+  final TextEditingController alamatC = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  void pendaftaranPengguna() async {
-    final nama = namaC.text;
-    final nomor = nomorC.text;
+
+  @override
+  void dispose() {
+    namaC.dispose();
+    nomorC.dispose();
+    emailC.dispose();
+    passC.dispose();
+    konfirmC.dispose();
+    alamatC.dispose();
+    super.dispose();
+  }
+
+  Future<void> pendaftaranPengguna() async {
+    final nama = namaC.text.trim();
+    final nomor = nomorC.text.trim();
     final email = emailC.text.trim();
     final pass = passC.text;
-    final alamat = alamatC.text;
+    final alamat = alamatC.text.trim();
 
     if (nama.isEmpty ||
         nomor.isEmpty ||
@@ -42,28 +58,86 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
       return;
     }
 
-    final pengguna = UserModelLoginSQL(
-      nama: nama,
-      nomorhp: nomor,
-      email: email,
-      password: pass,
-      alamat: alamat,
-    );
+    setState(() {
+      isLoading = true;
+    });
 
-    bool success = await DBHelper().registerUser(pengguna);
+    try {
+      // 1. Buat akun di Firebase Authentication
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: pass);
 
-    if (!mounted) return;
+      final user = userCredential.user;
+      if (user != null) {
+        // Update nama display di Firebase Auth
+        await user.updateDisplayName(nama);
 
-    if (success) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat')));
+        // 2. Simpan detail profil ke Firestore
+        final newUser = UserModelFirebase(
+          uid: user.uid,
+          name: nama,
+          nomor: nomor,
+          email: email,
+          alamat: alamat,
+          createdAt: DateTime.now(),
+        );
 
-      context.push(HalamanLoginFodos());
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Email sudah terdaftar!')));
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(newUser.toMap());
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akun berhasil dibuat! Silakan masuk.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      } else {
+        context.pushReplacement(const HalamanLoginFodos());
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Pendaftaran gagal!';
+      if (e.code == 'email-already-in-use') {
+        errorMessage = 'Email sudah terdaftar!';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Format email tidak valid!';
+      } else if (e.code == 'weak-password') {
+        errorMessage = 'Kata sandi terlalu lemah (minimal 6 karakter)!';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage =
+            'Gagal terhubung ke jaringan! Periksa koneksi internet Anda.';
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        errorMessage = e.message!;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
   }
 
@@ -72,27 +146,32 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
     return Scaffold(
       body: SingleChildScrollView(
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: 20, vertical: 50),
-          height: 1200,
-          width: 400,
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 50),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
-            border: BoxBorder.all(color: Colors.black),
+            border: Border.all(color: Colors.black12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Form(
             key: _formKey,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               child: Column(
                 children: [
-                  SizedBox(height: 20),
+                  const SizedBox(height: 10),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        height: 100,
-                        width: 100,
+                        height: 90,
+                        width: 90,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(75),
                         ),
@@ -100,52 +179,55 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
                       ),
                     ],
                   ),
-                  Text(
+                  const SizedBox(height: 12),
+                  const Text(
                     "Buat Akun Baru",
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   judulTextfield("Nama Lengkap"),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   textInputan(
                     "Masukkan Nama Anda",
                     kontroller: namaC,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Nama Wajib Di isi";
+                      if (value == null || value.trim().isEmpty) {
+                        return "Nama Wajib Diisi";
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   judulTextfield("HandPhone"),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   textInputan(
                     "Masukkan Nomor HandPhone",
                     kontroller: nomorC,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Nomor Wajib Di isi";
+                      if (value == null || value.trim().isEmpty) {
+                        return "Nomor Wajib Diisi";
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   judulTextfield("Email"),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   textInputan(
                     "Masukkan Email",
                     kontroller: emailC,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Email Wajib Di isi";
+                      if (value == null || value.trim().isEmpty) {
+                        return "Email Wajib Diisi";
                       } else if (!value.contains("@")) {
                         return "Email Tidak Valid";
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 16),
+                  judulTextfield("Password"),
+                  const SizedBox(height: 5),
                   passField(
                     obscureText: hide,
                     hintText: "Masukkan Password",
@@ -162,80 +244,90 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return "Password Wajib Di isi";
+                        return "Password Wajib Diisi";
                       } else if (value.length < 8) {
                         return "Kata Sandi Harus Lebih Dari 8 Karakter";
                       }
                       return null;
                     },
                   ),
-
-                  SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   judulTextfield("Konfirmasi Password"),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   passField(
-                    obscureText: hide,
+                    obscureText: hideConfirm,
                     hintText: "Masukkan Konfirmasi Password",
                     controller: konfirmC,
                     suffixIcon: IconButton(
                       onPressed: () {
                         setState(() {
-                          hide = !hide;
+                          hideConfirm = !hideConfirm;
                         });
                       },
                       icon: Icon(
-                        hide ? Icons.visibility_off : Icons.visibility,
+                        hideConfirm ? Icons.visibility_off : Icons.visibility,
                       ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
-                        return "Password Wajib Di isi";
+                        return "Konfirmasi Password Wajib Diisi";
                       } else if (value != passC.text) {
-                        return "Pasword Tidak valid!";
+                        return "Password Tidak Cocok!";
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   judulTextfield("Alamat"),
-                  SizedBox(height: 5),
+                  const SizedBox(height: 5),
                   textInputan(
                     "Masukkan Alamat Anda",
                     kontroller: alamatC,
                     validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return "Alamat Wajib Di isi";
+                      if (value == null || value.trim().isEmpty) {
+                        return "Alamat Wajib Diisi";
                       }
                       return null;
                     },
                   ),
-                  SizedBox(height: 40),
+                  const SizedBox(height: 32),
                   SizedBox(
-                    height: 40,
-                    width: 400,
+                    height: 48,
+                    width: double.infinity,
                     child: ElevatedButton(
-                      style: ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(
-                          AppColors.secondary,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          setState(() {
-                            pendaftaranPengguna();
-                          });
-                        }
-                      },
-                      child: Text(
-                        "Daftar",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () {
+                              if (_formKey.currentState!.validate()) {
+                                pendaftaranPengguna();
+                              }
+                            },
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              "Daftar",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Row(
@@ -244,13 +336,20 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
                         const Text("Sudah punya akun?"),
                         TextButton(
                           onPressed: () {
-                            setState(() {
-                              context.pop(HalamanLoginFodos());
-                            });
+                            if (Navigator.of(context).canPop()) {
+                              Navigator.of(context).pop();
+                            } else {
+                              context.pushReplacement(
+                                const HalamanLoginFodos(),
+                              );
+                            }
                           },
                           child: const Text(
                             "Masuk",
-                            style: TextStyle(color: AppColors.secondary),
+                            style: TextStyle(
+                              color: AppColors.secondary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ],
@@ -265,3 +364,4 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
     );
   }
 }
+
