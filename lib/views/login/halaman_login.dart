@@ -1,7 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
@@ -18,11 +18,19 @@ class HalamanLoginFodos extends StatefulWidget {
 class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
   final _formKey = GlobalKey<FormState>();
   bool hide = true;
+  bool isLoading = false;
 
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passwordC = TextEditingController();
 
-  void loginPengguna() async {
+  @override
+  void dispose() {
+    emailC.dispose();
+    passwordC.dispose();
+    super.dispose();
+  }
+
+  Future<void> loginPengguna() async {
     final user = emailC.text.trim();
     final pass = passwordC.text;
     if (user.isEmpty || pass.isEmpty) {
@@ -32,23 +40,192 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
       return;
     }
 
-    final pengguna = await DBHelper().loginUser(user, pass);
+    setState(() {
+      isLoading = true;
+    });
 
-    if (!mounted) return;
+    try {
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: user, password: pass);
 
-    if (pengguna != null) {
-      await PreferenceHandler.setLogin(true);
-      await PreferenceHandler.setUserEmail(pengguna.email);
+      if (userCredential.user != null) {
+        await PreferenceHandler.setLogin(true);
+        await PreferenceHandler.setUserEmail(
+          userCredential.user?.email ?? user,
+        );
+
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Login berhasil! Selamat datang.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        context.pushAndRemoveAll(const BottomNavTugas12());
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Login gagal! Periksa email dan password Anda.';
+      if (e.code == 'user-not-found') {
+        errorMessage =
+            'Pengguna tidak ditemukan! Silakan daftar terlebih dahulu.';
+      } else if (e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
+        errorMessage = 'Email atau password salah!';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Format email tidak valid!';
+      } else if (e.code == 'user-disabled') {
+        errorMessage = 'Akun pengguna ini telah dinonaktifkan.';
+      } else if (e.code == 'too-many-requests') {
+        errorMessage =
+            'Terlalu banyak percobaan gagal. Silakan coba beberapa saat lagi.';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage =
+            'Gagal terhubung ke jaringan! Periksa koneksi internet Anda.';
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        errorMessage = e.message!;
+      }
+
       if (!mounted) return;
-
-      context.pushAndRemoveAll(BottomNavTugas12());
-    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Login gagal! email atau Password salah.'),
-        ), // SnackBar
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+        ),
       );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
     }
+  }
+
+  void _showForgotPasswordDialog() {
+    final resetEmailC = TextEditingController(text: emailC.text.trim());
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        bool isResetting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text("Reset Kata Sandi"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Masukkan email akun Anda untuk menerima tautan reset kata sandi.",
+                    style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: resetEmailC,
+                    keyboardType: TextInputType.emailAddress,
+                    decoration: InputDecoration(
+                      hintText: "Masukkan Email",
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: AppColors.primary,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Batal"),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: isResetting
+                      ? null
+                      : () async {
+                          final email = resetEmailC.text.trim();
+                          if (email.isEmpty || !email.contains("@")) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Masukkan email yang valid!"),
+                              ),
+                            );
+                            return;
+                          }
+                          final messenger = ScaffoldMessenger.of(context);
+                          setDialogState(() => isResetting = true);
+                          try {
+                            await FirebaseAuth.instance
+                                .sendPasswordResetEmail(email: email);
+                            if (ctx.mounted) {
+                              Navigator.pop(ctx);
+                            }
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "Tautan reset kata sandi telah dikirim ke email Anda.",
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text("Gagal mengirim email reset: $e"),
+                                backgroundColor: Colors.redAccent,
+                              ),
+                            );
+                          } finally {
+                            if (ctx.mounted) {
+                              setDialogState(() => isResetting = false);
+                            }
+                          }
+                        },
+                  child: isResetting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Kirim",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -102,7 +279,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     "Selamatkan Makanan, Selamatkan Bumi",
                     textAlign: TextAlign.center,
                     style: TextStyle(
@@ -249,22 +426,14 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              "Fitur Lupa Kata Sandi belum tersedia.",
-                            ),
-                          ),
-                        );
-                      },
+                      onPressed: _showForgotPasswordDialog,
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           vertical: 4,
                           horizontal: 8,
                         ),
                       ),
-                      child: Text(
+                      child: const Text(
                         "Lupa Kata Sandi?",
                         style: TextStyle(
                           color: AppColors.secondary,
@@ -288,33 +457,42 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                           borderRadius: BorderRadius.circular(16),
                         ),
                       ),
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          loginPengguna();
-                          // context.push(PendaftaranTugas12());
-                        }
-                        return;
-                      },
-                      child: Text(
-                        "Login",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
+                      onPressed: isLoading
+                          ? null
+                          : () async {
+                              if (_formKey.currentState!.validate()) {
+                                loginPengguna();
+                              }
+                            },
+                      child: isLoading
+                          ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : const Text(
+                              "Login",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                     ),
                   ),
                   const SizedBox(height: 28),
 
                   // Social Login Separator
-                  Row(
+                  const Row(
                     children: [
-                      const Expanded(
+                      Expanded(
                         child: Divider(color: AppColors.border, thickness: 1),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        padding: EdgeInsets.symmetric(horizontal: 14),
                         child: Text(
                           "ATAU MASUK DENGAN",
                           style: TextStyle(
@@ -325,7 +503,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                           ),
                         ),
                       ),
-                      const Expanded(
+                      Expanded(
                         child: Divider(color: AppColors.border, thickness: 1),
                       ),
                     ],
@@ -360,7 +538,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
+                        const Text(
                           "Belum punya akun? ",
                           style: TextStyle(
                             color: AppColors.textGrey,
@@ -371,7 +549,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                           onTap: () {
                             context.push(const HalamanPendaftaranFodos());
                           },
-                          child: Text(
+                          child: const Text(
                             "Daftar Sekarang",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
@@ -393,3 +571,4 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     );
   }
 }
+
