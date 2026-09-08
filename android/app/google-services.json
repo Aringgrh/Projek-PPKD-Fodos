@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "350115421699",
+    "project_id": "fodos-project",
+    "storage_bucket": "fodos-project.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:350115421699:android:87ff416ffc56b97c303836",
+        "android_client_info": {
+          "package_name": "com.Ari.Fodos"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCsf2PdXYxQm6j3fmKLXTg3QLOM3tPymHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
