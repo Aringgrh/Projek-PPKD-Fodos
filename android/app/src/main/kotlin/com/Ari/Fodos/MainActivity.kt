@@ -1,4 +1,4 @@
-package com.example.fodos
+package com.Ari.Fodos
 
 import io.flutter.embedding.android.FlutterActivity
 

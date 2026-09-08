@@ -35,10 +35,7 @@ class AppTextstyle {
     fontSize: 14,
     color: AppColors.textDark,
   );
-  static const namaToko = TextStyle(
-    fontSize: 11,
-    color: AppColors.textGrey,
-  );
+  static const namaToko = TextStyle(fontSize: 11, color: AppColors.textGrey);
   static const harga = TextStyle(
     fontWeight: FontWeight.bold,
     fontSize: 15,
@@ -50,4 +47,3 @@ class AppTextstyle {
     decoration: TextDecoration.lineThrough,
   );
 }
-

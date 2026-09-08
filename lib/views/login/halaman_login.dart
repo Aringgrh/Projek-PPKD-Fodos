@@ -26,7 +26,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     final user = emailC.text.trim();
     final pass = passwordC.text;
     if (user.isEmpty || pass.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Isi semua field!')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Isi semua field!')));
       return;
     }
 
@@ -42,7 +44,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
       context.pushAndRemoveAll(BottomNavTugas12());
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Login gagal! email atau Password salah.')), // SnackBar
+        const SnackBar(
+          content: Text('Login gagal! email atau Password salah.'),
+        ), // SnackBar
       );
     }
   }
@@ -110,25 +114,40 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   const SizedBox(height: 36),
 
                   // Email Input Field
-                  Text("Email", style: AppTextstyle.heading2.copyWith(fontSize: 14)),
+                  Text(
+                    "Email",
+                    style: AppTextstyle.heading2.copyWith(fontSize: 14),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: emailC,
                     keyboardType: TextInputType.emailAddress,
                     decoration: InputDecoration(
                       hintText: "Masukkan Email Anda",
-                      hintStyle: const TextStyle(color: Color(0xFFA0AEC0), fontSize: 14),
-                      prefixIcon: const Icon(Icons.email_outlined, color: AppColors.primary),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFA0AEC0),
+                        fontSize: 14,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.email_outlined,
+                        color: AppColors.primary,
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -136,7 +155,10 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                        borderSide: const BorderSide(
+                          color: Colors.redAccent,
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (value) {
@@ -152,18 +174,29 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   const SizedBox(height: 20),
 
                   // Password Input Field
-                  Text("Password", style: AppTextstyle.heading2.copyWith(fontSize: 14)),
+                  Text(
+                    "Password",
+                    style: AppTextstyle.heading2.copyWith(fontSize: 14),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: passwordC,
                     obscureText: hide,
                     decoration: InputDecoration(
                       hintText: "Masukkan Password",
-                      hintStyle: const TextStyle(color: Color(0xFFA0AEC0), fontSize: 14),
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.primary),
+                      hintStyle: const TextStyle(
+                        color: Color(0xFFA0AEC0),
+                        fontSize: 14,
+                      ),
+                      prefixIcon: const Icon(
+                        Icons.lock_outline,
+                        color: AppColors.primary,
+                      ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          hide ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                          hide
+                              ? Icons.visibility_off_outlined
+                              : Icons.visibility_outlined,
                           color: AppColors.textGrey,
                         ),
                         onPressed: () {
@@ -174,14 +207,20 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                          color: AppColors.primary,
+                          width: 2,
+                        ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -189,7 +228,10 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
-                        borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                        borderSide: const BorderSide(
+                          color: Colors.redAccent,
+                          width: 2,
+                        ),
                       ),
                     ),
                     validator: (value) {
@@ -209,11 +251,18 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                     child: TextButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Fitur Lupa Kata Sandi belum tersedia.")),
+                          const SnackBar(
+                            content: Text(
+                              "Fitur Lupa Kata Sandi belum tersedia.",
+                            ),
+                          ),
                         );
                       },
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 4,
+                          horizontal: 8,
+                        ),
                       ),
                       child: Text(
                         "Lupa Kata Sandi?",
@@ -235,7 +284,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 2,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
                       onPressed: () async {
                         if (_formKey.currentState!.validate()) {
@@ -259,7 +310,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   // Social Login Separator
                   Row(
                     children: [
-                      const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                      const Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1),
+                      ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 14),
                         child: Text(
@@ -272,7 +325,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                           ),
                         ),
                       ),
-                      const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                      const Expanded(
+                        child: Divider(color: AppColors.border, thickness: 1),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -282,7 +337,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                     children: [
                       Expanded(
                         child: buildSocialHButton(
-                          iconPath: "assets/images/google.png",
+                          iconPath: "assets/images/googleIcon.png",
                           label: "Google",
                           onTap: () {},
                         ),
@@ -307,7 +362,10 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                       children: [
                         Text(
                           "Belum punya akun? ",
-                          style: TextStyle(color: AppColors.textGrey, fontSize: 14),
+                          style: TextStyle(
+                            color: AppColors.textGrey,
+                            fontSize: 14,
+                          ),
                         ),
                         GestureDetector(
                           onTap: () {
@@ -334,6 +392,4 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
       ),
     );
   }
-
-
 }
