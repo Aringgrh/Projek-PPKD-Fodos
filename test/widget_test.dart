@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:fodos/service/preferencehandler.dart';
-import 'package:fodos/model/produk_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/splash_screen.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
@@ -36,14 +36,14 @@ void main() {
     await PreferenceHandler.init();
   });
 
-  final dummyProduk = ProdukModel(
-    id: 1,
+  final dummyProduk = ProductModel(
+    id: '1',
     namaProduk: 'Donat Coklat Premium Penyelamatan Super Lezat',
     namaToko: 'Toko Roti & Pastry Berkah Sejahtera',
     kategori: 'roti',
     harga: 15000.0,
     stok: 5,
-    gambar: 'assets/images/logoo.png',
+    gambarUrl: 'assets/images/logoo.png',
   );
 
   Widget createTestWidget(Widget child, {Size size = const Size(360, 640)}) {
@@ -116,14 +116,14 @@ void main() {
 
   testWidgets('Test PesananAktifView View', (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
-    await tester.pumpWidget(createTestWidget(const PesananAktifView(userId: 1), size: const Size(320, 568)));
+    await tester.pumpWidget(createTestWidget(const PesananAktifView(userId: '1'), size: const Size(320, 568)));
     await tester.pump(const Duration(seconds: 1));
     expect(find.byType(PesananAktifView), findsOneWidget);
   });
 
   testWidgets('Test RiwayatView View', (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(320, 568));
-    await tester.pumpWidget(createTestWidget(const RiwayatView(userId: 1), size: const Size(320, 568)));
+    await tester.pumpWidget(createTestWidget(const RiwayatView(userId: '1'), size: const Size(320, 568)));
     await tester.pump(const Duration(seconds: 1));
     expect(find.byType(RiwayatView), findsOneWidget);
   });
