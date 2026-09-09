@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 class RiwayatView extends StatelessWidget {
   final String userId;
@@ -25,28 +26,11 @@ class RiwayatView extends StatelessWidget {
   }
 
   Widget _buildItemImage(String image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    } else if (image.isNotEmpty) {
-      return Image.asset(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    }
-    return Container(
-      color: Colors.grey[200],
-      child: const Icon(Icons.fastfood, color: Colors.grey),
+    return AppImageLoader(
+      imageUrl: image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 

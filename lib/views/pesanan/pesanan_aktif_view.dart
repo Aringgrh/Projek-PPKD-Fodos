@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 class PesananAktifView extends StatefulWidget {
   final String userId;
@@ -29,7 +30,7 @@ class _PesananAktifViewState extends State<PesananAktifView> {
         });
   }
 
-  Future<void> _selesaikan(String pesananId, String orderSummary) async {
+  Future<void> _selesaikan(OrderModel order, String orderSummary) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -53,9 +54,35 @@ class _PesananAktifViewState extends State<PesananAktifView> {
 
     if (confirm == true) {
       try {
+        // Kurangi stok / porsi produk di database saat pesanan diselesaikan
+        for (final item in order.items) {
+          if (item.productId.isNotEmpty && item.jumlah > 0) {
+            try {
+              final prodDoc = FirebaseFirestore.instance
+                  .collection('products')
+                  .doc(item.productId);
+              await FirebaseFirestore.instance.runTransaction((
+                transaction,
+              ) async {
+                final snapshot = await transaction.get(prodDoc);
+                if (snapshot.exists) {
+                  final currentStok =
+                      (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
+                  final newStok = (currentStok - item.jumlah)
+                      .clamp(0, 999999)
+                      .toInt();
+                  transaction.update(prodDoc, {'stok': newStok});
+                }
+              });
+            } catch (err) {
+              debugPrint('Gagal update stok produk ${item.productId}: $err');
+            }
+          }
+        }
+
         await FirebaseFirestore.instance
             .collection('orders')
-            .doc(pesananId)
+            .doc(order.id)
             .update({
               'status': 'Selesai',
               'updatedAt': FieldValue.serverTimestamp(),
@@ -131,28 +158,224 @@ class _PesananAktifViewState extends State<PesananAktifView> {
   }
 
   Widget _buildItemImage(String image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    } else if (image.isNotEmpty) {
-      return Image.asset(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    }
-    return Container(
-      color: Colors.grey[200],
-      child: const Icon(Icons.fastfood, color: Colors.grey),
+    return AppImageLoader(
+      imageUrl: image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+    );
+  }
+
+  void _tampilkanBarcode(OrderModel order, String orderSummary) {
+    final pickupCode = order.id.length >= 8
+        ? 'FODOS-${order.id.substring(0, 8).toUpperCase()}'
+        : (order.id.isNotEmpty
+              ? 'FODOS-${order.id.toUpperCase()}'
+              : 'FODOS-ORDER');
+
+    final storeName =
+        order.items.isNotEmpty && order.items.first.namaToko.isNotEmpty
+        ? order.items.first.namaToko
+        : 'Toko Mitra Fodos';
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(22.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Text(
+                          'Barcode Pengambilan',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        size: 20,
+                        color: AppColors.textGrey,
+                      ),
+                      onPressed: () => Navigator.pop(dialogCtx),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Tunjukkan barcode ini ke kasir $storeName untuk mengambil pesanan Anda.',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textGrey,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.04),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        height: 70,
+                        width: double.infinity,
+                        child: CustomPaint(
+                          painter: BarcodePainter(
+                            code: order.id.isNotEmpty ? order.id : 'FODOSORDER',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        pickupCode,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2.5,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Pesanan:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                          Flexible(
+                            child: Text(
+                              orderSummary,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.right,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Total Tagihan:',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.textGrey,
+                            ),
+                          ),
+                          Text(
+                            'Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.secondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(dialogCtx);
+                      _selesaikan(order, orderSummary);
+                    },
+                    icon: const Icon(Icons.check_circle_outline, size: 18),
+                    label: const Text(
+                      'Selesaikan Pesanan',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.secondary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 13),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () => Navigator.pop(dialogCtx),
+                    child: const Text(
+                      'Tutup',
+                      style: TextStyle(
+                        color: AppColors.textGrey,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -162,50 +385,60 @@ class _PesananAktifViewState extends State<PesananAktifView> {
       stream: _streamActiveOrders(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.secondary),
+          );
         }
+
         if (snapshot.hasError) {
-          return Center(child: Text('Terjadi kesalahan: ${snapshot.error}'));
-        }
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.shopping_bag_outlined,
-                    size: 80,
-                    color: AppColors.textGrey.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'Tidak ada pesanan aktif',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Anda tidak memiliki pesanan yang sedang diproses saat ini.',
-                    style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 12),
+                Text('Terjadi kesalahan: ${snapshot.error}'),
+              ],
             ),
           );
         }
 
-        final activeOrders = snapshot.data!;
+        final orders = snapshot.data ?? [];
+
+        if (orders.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Belum ada pesanan aktif',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Yuk pesan makanan surplus dan kurangi food waste!',
+                  style: TextStyle(fontSize: 13, color: AppColors.textGrey),
+                ),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          itemCount: activeOrders.length,
+          padding: const EdgeInsets.all(16),
+          itemCount: orders.length,
           itemBuilder: (context, index) {
-            final order = activeOrders[index];
+            final order = orders[index];
             final firstItem = order.items.isNotEmpty
                 ? order.items.first
                 : OrderItemModel(
@@ -216,41 +449,44 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                     harga: order.totalHarga,
                   );
 
-            final String summary = order.items.length > 1
-                ? "${firstItem.namaProduk} (+${order.items.length - 1} item lainnya)"
+            final otherItemsCount = order.items.length - 1;
+            final summary = otherItemsCount > 0
+                ? '${firstItem.namaProduk} +$otherItemsCount menu lainnya'
                 : firstItem.namaProduk;
 
-            return Container(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
+            return Card(
+              margin: const EdgeInsets.only(bottom: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: AppColors.border.withValues(alpha: 0.5),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                side: const BorderSide(color: AppColors.border),
               ),
+              color: Colors.white,
               child: Padding(
-                padding: const EdgeInsets.all(14.0),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header: Date & Status Badge
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          order.createdAt.toLocal().toString().substring(0, 16),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textGrey,
-                          ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.access_time_filled,
+                              size: 14,
+                              color: AppColors.secondary,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'ID: #${order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase()}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textDark,
+                              ),
+                            ),
+                          ],
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -258,32 +494,29 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(30),
+                            color: AppColors.secondary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(20),
                           ),
                           child: Text(
                             order.status,
                             style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.primary,
+                              color: AppColors.secondary,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 18, color: AppColors.border),
-
-                    // Product & Order Details
+                    const Divider(height: 20),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(10),
+                          child: SizedBox(
+                            width: 60,
+                            height: 60,
                             child: _buildItemImage(firstItem.gambarUrl),
                           ),
                         ),
@@ -327,8 +560,6 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                       ],
                     ),
                     const SizedBox(height: 12),
-
-                    // Action buttons
                     Row(
                       children: [
                         Expanded(
@@ -350,8 +581,13 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                         ),
                         const SizedBox(width: 10),
                         Expanded(
-                          child: ElevatedButton(
-                            onPressed: () => _selesaikan(order.id, summary),
+                          child: ElevatedButton.icon(
+                            onPressed: () => _tampilkanBarcode(order, summary),
+                            icon: const Icon(Icons.qr_code_2_rounded, size: 16),
+                            label: const Text(
+                              'Tampilkan Barcode',
+                              style: TextStyle(fontSize: 12),
+                            ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,
                               foregroundColor: Colors.white,
@@ -359,10 +595,6 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
-                            ),
-                            child: const Text(
-                              'Selesai',
-                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ),
@@ -377,4 +609,49 @@ class _PesananAktifViewState extends State<PesananAktifView> {
       },
     );
   }
+}
+
+class BarcodePainter extends CustomPainter {
+  final String code;
+
+  BarcodePainter({required this.code});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.fill;
+
+    final bytes = code.codeUnits;
+    List<int> pattern = [2, 1, 1, 2];
+
+    for (int i = 0; i < bytes.length; i++) {
+      int b = bytes[i];
+      pattern.add((b % 3) + 1);
+      pattern.add(((b ~/ 3) % 2) + 1);
+      pattern.add(((b ~/ 6) % 3) + 1);
+      pattern.add(1);
+    }
+
+    pattern.addAll([2, 1, 2, 3, 1, 2]);
+
+    int totalUnits = pattern.fold<int>(0, (acc, val) => acc + val);
+    double unitWidth = size.width / totalUnits;
+
+    double currentX = 0;
+    bool isBar = true;
+
+    for (int barWidthUnits in pattern) {
+      double width = barWidthUnits * unitWidth;
+      if (isBar) {
+        canvas.drawRect(Rect.fromLTWH(currentX, 0, width, size.height), paint);
+      }
+      currentX += width;
+      isBar = !isBar;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BarcodePainter oldDelegate) =>
+      oldDelegate.code != code;
 }
