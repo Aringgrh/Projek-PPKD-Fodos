@@ -1,9 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/widgets/widget_display_produk.dart';
-import 'package:fodos/database/db_helper.dart';
-import 'package:fodos/model/produk_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
+import 'package:fodos/widgets/widget_display_produk.dart';
 
 class HalamanPencarianFodos extends StatefulWidget {
   const HalamanPencarianFodos({super.key});
@@ -14,8 +14,8 @@ class HalamanPencarianFodos extends StatefulWidget {
 
 class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
   final TextEditingController _searchController = TextEditingController();
-  List<ProdukModel> _allProduk = [];
-  List<ProdukModel> _filteredProduk = [];
+  List<ProductModel> _allProduk = [];
+  List<ProductModel> _filteredProduk = [];
   bool _isLoading = true;
 
   @override
@@ -34,7 +34,12 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
 
   Future<void> _fetchProducts() async {
     try {
-      final products = await DBHelper().getAllProduk();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('products').get();
+      final products = snapshot.docs
+          .map((doc) => ProductModel.fromFirestore(doc))
+          .toList();
+
       if (!mounted) return;
       setState(() {
         _allProduk = products;
@@ -50,7 +55,7 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
   }
 
   void _onSearchChanged() {
-    final query = _searchController.text.toLowerCase();
+    final query = _searchController.text.toLowerCase().trim();
     setState(() {
       if (query.isEmpty) {
         _filteredProduk = _allProduk;
@@ -205,11 +210,11 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
                           itemBuilder: (context, index) {
                             final produk = _filteredProduk[index];
                             return displayProduk(
-                              image: produk.gambar,
+                              image: produk.gambarUrl,
                               namaMakanan: produk.namaProduk,
                               namaToko: produk.namaToko,
                               sisaPorsi: produk.stok.toString(),
-                              pickUp: "19:00 - 20:30", // Mock pickup time
+                              pickUp: "19:00 - 20:30",
                               harga:
                                   "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
                               onTap: () {

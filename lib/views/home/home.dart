@@ -1,12 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/widgets/widget_carousel.dart';
-import 'package:fodos/widgets/widget_display_produk.dart';
-import 'package:fodos/database/db_helper.dart';
-import 'package:fodos/model/produk_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
 import 'package:fodos/views/home/halaman_favorit.dart';
 import 'package:fodos/views/home/halaman_keranjang.dart';
+import 'package:fodos/views/home/tambah_produk.dart';
+import 'package:fodos/widgets/widget_carousel.dart';
+import 'package:fodos/widgets/widget_display_produk.dart';
 import 'package:fodos/widgets/widget_home.dart';
 
 class HomeFodos extends StatefulWidget {
@@ -19,21 +20,28 @@ class HomeFodos extends StatefulWidget {
 class _HomeFodosState extends State<HomeFodos> {
   int selectedCategoryIndex = 0;
 
-  Future<List<ProdukModel>> _loadProduk() {
-    if (selectedCategoryIndex == 1) {
-      return DBHelper().getProdukByKategori('roti');
-    } else if (selectedCategoryIndex == 2) {
-      return DBHelper().getProdukByKategori('makanan berat');
-    } else {
-      return DBHelper().getAllProduk();
-    }
-  }
-
   final List<Map<String, dynamic>> categories = [
     {"name": "Semua", "icon": Icons.menu_book_outlined},
     {"name": "Roti", "icon": Icons.bakery_dining},
     {"name": "Makanan Berat", "icon": Icons.restaurant},
   ];
+
+  Stream<List<ProductModel>> _streamProduk() {
+    final collection = FirebaseFirestore.instance.collection('products');
+    Query<Map<String, dynamic>> query = collection;
+
+    if (selectedCategoryIndex == 1) {
+      query = query.where('kategori', isEqualTo: 'Roti');
+    } else if (selectedCategoryIndex == 2) {
+      query = query.where('kategori', isEqualTo: 'Makanan Berat');
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs
+          .map((doc) => ProductModel.fromFirestore(doc))
+          .toList();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -120,13 +128,23 @@ class _HomeFodosState extends State<HomeFodos> {
                             Icons.favorite_border,
                             color: AppColors.primary,
                           ),
+                          tooltip: 'Favorit Saya',
                         ),
                         IconButton(
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const HalamanTambahProdukFodos(),
+                              ),
+                            );
+                          },
                           icon: const Icon(
-                            Icons.notifications_none_outlined,
+                            Icons.add_circle_outline,
                             color: AppColors.primary,
                           ),
+                          tooltip: 'Tambah Produk',
                         ),
                         IconButton(
                           onPressed: () {
@@ -135,12 +153,13 @@ class _HomeFodosState extends State<HomeFodos> {
                               MaterialPageRoute(
                                 builder: (context) => const HalamanKeranjang(),
                               ),
-                            ).then((_) => setState(() {}));
+                            );
                           },
                           icon: const Icon(
                             Icons.shopping_cart_outlined,
                             color: AppColors.primary,
                           ),
+                          tooltip: 'Keranjang',
                         ),
                       ],
                     ),
@@ -170,6 +189,10 @@ class _HomeFodosState extends State<HomeFodos> {
                     ],
                   ),
                   child: TextField(
+                    readOnly: true,
+                    onTap: () {
+                      // Navigate to search
+                    },
                     decoration: InputDecoration(
                       hintText: "Cari surplus makanan lezat...",
                       hintStyle: const TextStyle(
@@ -269,14 +292,14 @@ class _HomeFodosState extends State<HomeFodos> {
 
               const SizedBox(height: 8),
 
-              // Product Display Cards
-              FutureBuilder<List<ProdukModel>>(
-                future: _loadProduk(),
+              // Product Display Cards with StreamBuilder from Firestore
+              StreamBuilder<List<ProductModel>>(
+                stream: _streamProduk(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24.0),
+                        padding: EdgeInsets.all(32.0),
                         child: CircularProgressIndicator(),
                       ),
                     );
@@ -290,10 +313,26 @@ class _HomeFodosState extends State<HomeFodos> {
                     );
                   }
                   if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24.0),
-                        child: Text('Tidak ada produk tersedia.'),
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.storefront_outlined,
+                              size: 64,
+                              color: AppColors.textGrey.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Belum ada produk untuk kategori ini.',
+                              style: TextStyle(
+                                color: AppColors.textGrey,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
@@ -306,11 +345,11 @@ class _HomeFodosState extends State<HomeFodos> {
                     itemBuilder: (context, index) {
                       final produk = listProduk[index];
                       return displayProduk(
-                        image: produk.gambar,
+                        image: produk.gambarUrl,
                         namaMakanan: produk.namaProduk,
                         namaToko: produk.namaToko,
                         sisaPorsi: produk.stok.toString(),
-                        pickUp: "19:00 - 20:30", // Mock pickup time
+                        pickUp: "19:00 - 20:30",
                         harga:
                             "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
                         onTap: () {
@@ -320,7 +359,7 @@ class _HomeFodosState extends State<HomeFodos> {
                               builder: (context) =>
                                   DetailMakanan(produk: produk),
                             ),
-                          ).then((_) => setState(() {}));
+                          );
                         },
                       );
                     },

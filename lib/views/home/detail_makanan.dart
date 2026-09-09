@@ -1,14 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
-import 'package:fodos/model/favorit_model.dart';
-import 'package:fodos/model/keranjang_model.dart';
-import 'package:fodos/model/pesanan_aktif_model.dart';
-import 'package:fodos/model/produk_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
 
 class DetailMakanan extends StatefulWidget {
-  final ProdukModel produk;
+  final ProductModel produk;
 
   const DetailMakanan({super.key, required this.produk});
 
@@ -19,7 +17,7 @@ class DetailMakanan extends StatefulWidget {
 class _DetailMakananState extends State<DetailMakanan> {
   int quantity = 1;
   bool isFavorite = false;
-  int userId = 1; // Default fallback user ID
+  String userId = '';
 
   @override
   void initState() {
@@ -28,54 +26,115 @@ class _DetailMakananState extends State<DetailMakanan> {
   }
 
   Future<void> _loadUserAndFavoriteStatus() async {
-    final email = PreferenceHandler.getUserEmail();
-    if (email != null) {
-      final user = await DBHelper().getUserByEmail(email);
-      if (user != null && user.id != null && mounted) {
-        setState(() {
-          userId = user.id!;
-        });
+    final currentFirebaseUser = FirebaseAuth.instance.currentUser;
+    final uid =
+        currentFirebaseUser?.uid ??
+        (PreferenceHandler.getUserEmail() ?? 'guest');
+    if (mounted) {
+      setState(() {
+        userId = uid;
+      });
+    }
+
+    if (widget.produk.id.isNotEmpty) {
+      try {
+        final favQuery = await FirebaseFirestore.instance
+            .collection('favorites')
+            .where('userId', isEqualTo: uid)
+            .where('productId', isEqualTo: widget.produk.id)
+            .limit(1)
+            .get();
+
+        if (mounted) {
+          setState(() {
+            isFavorite = favQuery.docs.isNotEmpty;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error checking favorite status: $e');
       }
     }
-    final favStatus = await DBHelper().isFavorit(userId, widget.produk.id ?? 0);
-    if (!mounted) return;
-    setState(() {
-      isFavorite = favStatus;
-    });
   }
 
   Future<void> _toggleFavorite() async {
-    final produkId = widget.produk.id ?? 0;
-    if (isFavorite) {
-      await DBHelper().deleteFavorit(userId, produkId);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dihapus dari Favorit'), duration: Duration(seconds: 1)),
-      );
-    } else {
-      await DBHelper().insertFavorit(FavoritModel(userId: userId, produkId: produkId));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ditambahkan ke Favorit'), duration: Duration(seconds: 1)),
-      );
+    final favRef = FirebaseFirestore.instance.collection('favorites');
+    try {
+      if (isFavorite) {
+        final query = await favRef
+            .where('userId', isEqualTo: userId)
+            .where('productId', isEqualTo: widget.produk.id)
+            .get();
+        for (var doc in query.docs) {
+          await doc.reference.delete();
+        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Dihapus dari Favorit'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      } else {
+        final fav = FavoriteModel(
+          userId: userId,
+          productId: widget.produk.id,
+          namaProduk: widget.produk.namaProduk,
+          namaToko: widget.produk.namaToko,
+          kategori: widget.produk.kategori,
+          gambarUrl: widget.produk.gambarUrl,
+          harga: widget.produk.harga,
+        );
+        await favRef.add(fav.toFirestore());
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ditambahkan ke Favorit'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+      setState(() {
+        isFavorite = !isFavorite;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal update favorit: $e')));
+      }
     }
-    setState(() {
-      isFavorite = !isFavorite;
-    });
   }
 
   Future<void> _addToCart() async {
-    final produkId = widget.produk.id ?? 0;
-    final item = KeranjangModel(
-      userId: userId,
-      produkId: produkId,
-      jumlah: quantity,
-      catatan: 'Penyelamatan Surplus',
-      gambar: widget.produk.gambar,
-    );
+    try {
+      final cartRef = FirebaseFirestore.instance.collection('carts');
+      final existing = await cartRef
+          .where('userId', isEqualTo: userId)
+          .where('productId', isEqualTo: widget.produk.id)
+          .limit(1)
+          .get();
 
-    final success = await DBHelper().insertKeranjang(item);
-    if (success) {
+      if (existing.docs.isNotEmpty) {
+        final doc = existing.docs.first;
+        final currentJumlah = doc.data()['jumlah'] as int? ?? 1;
+        await doc.reference.update({
+          'jumlah': currentJumlah + quantity,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        final item = CartModel(
+          userId: userId,
+          productId: widget.produk.id,
+          namaProduk: widget.produk.namaProduk,
+          namaToko: widget.produk.namaToko,
+          gambarUrl: widget.produk.gambarUrl,
+          harga: widget.produk.harga,
+          jumlah: quantity,
+          catatan: 'Penyelamatan Surplus',
+        );
+        await cartRef.add(item.toFirestore());
+      }
+
       if (mounted) {
         showDialog(
           context: context,
@@ -87,8 +146,8 @@ class _DetailMakananState extends State<DetailMakanan> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context); // Go back to Home
+                  Navigator.pop(context);
+                  Navigator.pop(context);
                 },
                 child: const Text('OK'),
               ),
@@ -96,71 +155,77 @@ class _DetailMakananState extends State<DetailMakanan> {
           ),
         );
       }
-    } else {
+    } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Gagal memasukkan ke keranjang')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memasukkan ke keranjang: $e')),
+        );
       }
     }
   }
 
   Future<void> _pesanSekarang() async {
-    final produkId = widget.produk.id ?? 0;
-    final latestProduk = await DBHelper().getProdukById(produkId);
-    final currentStok = latestProduk?.stok ?? widget.produk.stok;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final double totalPrice = widget.produk.harga * quantity;
 
-    if (currentStok <= 0) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Maaf, stok produk ini telah habis!'),
-            backgroundColor: Colors.red,
+      final pesanan = OrderModel(
+        userId: userId,
+        userName: user?.displayName ?? 'Pengguna Fodos',
+        userPhone: user?.phoneNumber ?? '',
+        alamatPengiriman: 'Jl. Sudirman No. 45, Jakarta',
+        items: [
+          OrderItemModel(
+            productId: widget.produk.id,
+            namaProduk: widget.produk.namaProduk,
+            namaToko: widget.produk.namaToko,
+            gambarUrl: widget.produk.gambarUrl,
+            harga: widget.produk.harga,
+            jumlah: quantity,
+            catatan: 'Penyelamatan Surplus',
           ),
-        );
+        ],
+        totalHarga: totalPrice,
+        totalItem: quantity,
+        status: 'Diproses',
+        metodePembayaran: 'Tunai saat Pengambilan',
+      );
+
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .add(pesanan.toFirestore());
+
+      // Kurangi stok jika ada ID dokumen
+      if (widget.produk.id.isNotEmpty) {
+        try {
+          final prodDoc = FirebaseFirestore.instance
+              .collection('products')
+              .doc(widget.produk.id);
+          await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final snapshot = await transaction.get(prodDoc);
+            if (snapshot.exists) {
+              final currentStok =
+                  snapshot.data()?['stok'] as int? ?? widget.produk.stok;
+              final newStok = (currentStok - quantity).clamp(0, 999999).toInt();
+              transaction.update(prodDoc, {'stok': newStok});
+            }
+          });
+        } catch (_) {}
       }
-      return;
-    }
 
-    if (quantity > currentStok) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Stok tidak mencukupi! Sisa stok: $currentStok porsi.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return;
-    }
-
-    final double totalPrice = widget.produk.harga * quantity;
-
-    final pesanan = PesananAktifModel(
-      userId: userId,
-      produkId: produkId,
-      jumlah: quantity,
-      totalHarga: totalPrice,
-      tanggal: DateTime.now().toLocal().toString().substring(0, 16),
-      status: 'Sedang Diproses',
-      gambar: widget.produk.gambar,
-    );
-
-    final success = await DBHelper().insertPesananAktif(pesanan);
-    if (success) {
       if (mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Pesanan Berhasil'),
             content: Text(
-              '${widget.produk.namaProduk} sebanyak $quantity porsi berhasil dipesan! Silakan cek status pesanan Anda di tab "Pesanan".',
+              '${widget.produk.namaProduk} sebanyak $quantity porsi berhasil dipesan! Cek status di tab "Pesanan".',
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  Navigator.pop(context, true); // Go back to Home with result
+                  Navigator.pop(context);
+                  Navigator.pop(context, true);
                 },
                 child: const Text('OK'),
               ),
@@ -168,11 +233,11 @@ class _DetailMakananState extends State<DetailMakanan> {
           ),
         );
       }
-    } else {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('Gagal membuat pesanan')));
+        ).showSnackBar(SnackBar(content: Text('Gagal membuat pesanan: $e')));
       }
     }
   }
@@ -210,7 +275,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                 ),
 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 24.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20.0,
+                    vertical: 24.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -221,7 +289,11 @@ class _DetailMakananState extends State<DetailMakanan> {
                           Expanded(
                             child: Row(
                               children: [
-                                const Icon(Icons.storefront, size: 16, color: AppColors.primary),
+                                const Icon(
+                                  Icons.storefront,
+                                  size: 16,
+                                  color: AppColors.primary,
+                                ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Text(
@@ -240,7 +312,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
@@ -290,7 +365,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.badgeBg,
                               borderRadius: BorderRadius.circular(8),
@@ -366,7 +444,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                               SizedBox(width: 4),
                               Text(
                                 '(124 ulasan)',
-                                style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textGrey,
+                                ),
                               ),
                             ],
                           ),
@@ -381,7 +462,9 @@ class _DetailMakananState extends State<DetailMakanan> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: AppColors.border.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,15 +474,38 @@ class _DetailMakananState extends State<DetailMakanan> {
                               children: const [
                                 Text(
                                   'Ahmad Subarjo',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 Row(
                                   children: [
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
                                   ],
                                 ),
                               ],
@@ -407,7 +513,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                             const SizedBox(height: 6),
                             const Text(
                               'Makanannya masih sangat fresh! Rasanya enak banget dan porsinya masih bagus sekali. Worth it!',
-                              style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textGrey,
+                              ),
                             ),
                           ],
                         ),
@@ -417,7 +526,9 @@ class _DetailMakananState extends State<DetailMakanan> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                          border: Border.all(
+                            color: AppColors.border.withValues(alpha: 0.5),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -427,15 +538,38 @@ class _DetailMakananState extends State<DetailMakanan> {
                               children: const [
                                 Text(
                                   'Siti Rahma',
-                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
                                 ),
                                 Row(
                                   children: [
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.amber, size: 12),
-                                    Icon(Icons.star, color: Colors.grey, size: 12),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.amber,
+                                      size: 12,
+                                    ),
+                                    Icon(
+                                      Icons.star,
+                                      color: Colors.grey,
+                                      size: 12,
+                                    ),
                                   ],
                                 ),
                               ],
@@ -443,7 +577,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                             const SizedBox(height: 6),
                             const Text(
                               'Penyelamatan yang sangat berharga! Hemat banget harganya untuk kualitas donat/makanan seperti ini.',
-                              style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textGrey,
+                              ),
                             ),
                           ],
                         ),
@@ -475,10 +612,18 @@ class _DetailMakananState extends State<DetailMakanan> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
                       ],
                     ),
-                    child: const Icon(Icons.arrow_back, color: AppColors.textDark, size: 20),
+                    child: const Icon(
+                      Icons.arrow_back,
+                      color: AppColors.textDark,
+                      size: 20,
+                    ),
                   ),
                 ),
 
@@ -491,7 +636,11 @@ class _DetailMakananState extends State<DetailMakanan> {
                       color: Colors.white,
                       shape: BoxShape.circle,
                       boxShadow: [
-                        BoxShadow(color: Colors.black26, blurRadius: 6, offset: Offset(0, 2)),
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 6,
+                          offset: Offset(0, 2),
+                        ),
                       ],
                     ),
                     child: Icon(
@@ -511,7 +660,10 @@ class _DetailMakananState extends State<DetailMakanan> {
             left: 0,
             right: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20.0,
+                vertical: 16.0,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
@@ -607,14 +759,23 @@ class _DetailMakananState extends State<DetailMakanan> {
                         Expanded(
                           child: OutlinedButton.icon(
                             onPressed: _addToCart,
-                            icon: const Icon(Icons.shopping_cart_outlined, size: 18),
+                            icon: const Icon(
+                              Icons.shopping_cart_outlined,
+                              size: 18,
+                            ),
                             label: const Text(
                               'Ke Keranjang',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.secondary,
-                              side: const BorderSide(color: AppColors.secondary, width: 1.5),
+                              side: const BorderSide(
+                                color: AppColors.secondary,
+                                width: 1.5,
+                              ),
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(50),
@@ -631,7 +792,10 @@ class _DetailMakananState extends State<DetailMakanan> {
                             icon: const Icon(Icons.flash_on, size: 18),
                             label: const Text(
                               'Pesan Sekarang',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
                             ),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.secondary,

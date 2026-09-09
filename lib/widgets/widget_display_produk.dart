@@ -1,6 +1,58 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 
+Widget _buildProductImage(String image) {
+  if (image.startsWith('http://') || image.startsWith('https://')) {
+    return Image.network(
+      image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 165,
+      errorBuilder: (context, error, stackTrace) => Container(
+        height: 165,
+        width: double.infinity,
+        color: Colors.grey[200],
+        child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
+      ),
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Container(
+          height: 165,
+          width: double.infinity,
+          color: Colors.grey[100],
+          child: const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ),
+        );
+      },
+    );
+  } else if (image.isNotEmpty) {
+    return Image.asset(
+      image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 165,
+      errorBuilder: (context, error, stackTrace) => Container(
+        height: 165,
+        width: double.infinity,
+        color: Colors.grey[200],
+        child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
+      ),
+    );
+  } else {
+    return Container(
+      height: 165,
+      width: double.infinity,
+      color: Colors.grey[200],
+      child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
+    );
+  }
+}
+
 Widget displayProduk({
   required String image,
   required String namaMakanan,
@@ -34,17 +86,8 @@ Widget displayProduk({
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Container with Distance Badge
-            Stack(
-              children: [
-                Container(
-                  height: 165,
-                  width: double.infinity,
-                  color: Colors.grey[200],
-                  child: Image.asset(image, fit: BoxFit.cover),
-                ),
-              ],
-            ),
+            // Image Container
+            Stack(children: [_buildProductImage(image)]),
 
             // Card Body Content
             Padding(
@@ -67,7 +110,10 @@ Widget displayProduk({
                       ),
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.badgeBg,
                           borderRadius: BorderRadius.circular(6),
@@ -94,13 +140,21 @@ Widget displayProduk({
                   const SizedBox(height: 10),
 
                   // Divider
-                  Divider(height: 1, thickness: 1, color: AppColors.border.withValues(alpha: 0.4)),
+                  Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: AppColors.border.withValues(alpha: 0.4),
+                  ),
                   const SizedBox(height: 8),
 
                   // Pickup Schedule Row
                   Row(
                     children: [
-                      const Icon(Icons.schedule, size: 14, color: AppColors.textGrey),
+                      const Icon(
+                        Icons.schedule,
+                        size: 14,
+                        color: AppColors.textGrey,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         "PICKUP: $pickUp",
