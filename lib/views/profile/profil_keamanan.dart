@@ -1,8 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
-import 'package:fodos/model/login_user_model.dart';
-import 'package:fodos/service/preferencehandler.dart';
 
 class ProfilKeamanan extends StatefulWidget {
   const ProfilKeamanan({super.key});
@@ -21,8 +20,6 @@ class _ProfilKeamananState extends State<ProfilKeamanan> {
   bool _isLoading = true;
   bool _isSaving = false;
 
-  UserModelLoginSQL? _currentUser;
-
   @override
   void initState() {
     super.initState();
@@ -37,21 +34,27 @@ class _ProfilKeamananState extends State<ProfilKeamanan> {
   }
 
   Future<void> _loadUserData() async {
-    final email = PreferenceHandler.getUserEmail();
-    if (email != null && email.isNotEmpty) {
-      final user = await DBHelper().getUserByEmail(email);
-      if (mounted) {
-        setState(() {
-          _currentUser = user;
-          _isLoading = false;
-        });
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data() != null && mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          return;
+        }
       }
-    } else {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    } catch (e) {
+      debugPrint("Error loading security profile: $e");
+    }
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -107,77 +110,49 @@ class _ProfilKeamananState extends State<ProfilKeamanan> {
       return;
     }
 
-    if (_currentUser != null && _currentUser!.password != currentPass) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Kata sandi saat ini tidak cocok."),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isSaving = true;
     });
 
     try {
-      if (_currentUser != null) {
-        final updatedUser = UserModelLoginSQL(
-          id: _currentUser!.id,
-          nama: _currentUser!.nama,
-          nomorhp: _currentUser!.nomorhp,
-          email: _currentUser!.email,
-          password: newPass,
-          alamat: _currentUser!.alamat,
-          gambar: _currentUser!.gambar,
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.email != null) {
+        // Re-authenticate user with current password
+        final cred = EmailAuthProvider.credential(
+          email: user.email!,
+          password: currentPass,
         );
+        await user.reauthenticateWithCredential(cred);
+        await user.updatePassword(newPass);
 
-        final success = await DBHelper().updateUser(updatedUser);
-        if (success) {
-          _currentUser = updatedUser;
-          _kataSandiSaatIniC.clear();
-          _kataSandiBaruC.clear();
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Kata sandi berhasil diperbarui!"),
-                backgroundColor: AppColors.secondary,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Gagal memperbarui kata sandi di database."),
-                backgroundColor: Colors.red,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          }
-        }
-      } else {
         _kataSandiSaatIniC.clear();
         _kataSandiBaruC.clear();
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Pengaturan kata sandi telah diperbarui."),
+              content: Text("Kata sandi berhasil diperbarui!"),
               backgroundColor: AppColors.secondary,
               behavior: SnackBarBehavior.floating,
             ),
           );
         }
       }
+    } on FirebaseAuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message ?? "Gagal memperbarui kata sandi."),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("Terjadi kesalahan: $e"),
+            content: Text("Gagal memperbarui kata sandi: $e"),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
           ),

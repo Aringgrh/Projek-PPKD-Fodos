@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/profile/informasi_pribadi.dart';
@@ -19,7 +21,7 @@ class ProfileTugas12 extends StatefulWidget {
 }
 
 class _ProfileTugas12State extends State<ProfileTugas12> {
-  String _userName = 'ariii';
+  String _userName = 'Pengguna Fodos';
 
   @override
   void initState() {
@@ -29,13 +31,23 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
 
   Future<void> _loadUserData() async {
     try {
-      final email = PreferenceHandler.getUserEmail();
-      if (email != null && email.isNotEmpty) {
-        final user = await DBHelper().getUserByEmail(email);
-        if (user != null && mounted) {
-          setState(() {
-            _userName = user.nama;
-          });
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.displayName != null && user.displayName!.isNotEmpty) {
+          if (mounted) setState(() => _userName = user.displayName!);
+        }
+
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data() != null && mounted) {
+          final userModel = UserModelFirebase.fromJson(doc.data()!);
+          if (userModel.name.isNotEmpty) {
+            setState(() {
+              _userName = userModel.name;
+            });
+          }
         }
       }
     } catch (e) {

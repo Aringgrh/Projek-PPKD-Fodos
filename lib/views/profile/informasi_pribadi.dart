@@ -1,8 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/extention/extention.dart';
-import 'package:fodos/model/login_user_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/profile/profil_keamanan.dart';
 import 'package:fodos/widgets/widget_informasi_pribadi.dart';
@@ -20,7 +21,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
   final TextEditingController nomorC = TextEditingController();
   final TextEditingController domisiliC = TextEditingController();
 
-  UserModelLoginSQL? currentUser;
+  UserModelFirebase? currentUser;
   bool isLoading = true;
   bool isSaving = false;
 
@@ -44,16 +45,24 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
       isLoading = true;
     });
     try {
-      final email = PreferenceHandler.getUserEmail();
-      if (email != null && email.isNotEmpty) {
-        final user = await DBHelper().getUserByEmail(email);
-        if (user != null) {
-          currentUser = user;
-          namaC.text = user.nama;
-          emailC.text = user.email;
-          nomorC.text = user.nomorhp;
-          domisiliC.text = user.alamat;
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        if (doc.exists && doc.data() != null) {
+          currentUser = UserModelFirebase.fromJson(doc.data()!);
+          namaC.text = currentUser!.name;
+          emailC.text = currentUser!.email.isNotEmpty ? currentUser!.email : (user.email ?? '');
+          nomorC.text = currentUser!.nomor;
+          domisiliC.text = currentUser!.alamat;
+        } else {
+          namaC.text = user.displayName ?? '';
+          emailC.text = user.email ?? (PreferenceHandler.getUserEmail() ?? '');
         }
+      } else {
+        emailC.text = PreferenceHandler.getUserEmail() ?? '';
       }
     } catch (e) {
       debugPrint("Error loading user data: $e");
@@ -76,24 +85,30 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
     final newNomor = nomorC.text.trim();
     final newDomisili = domisiliC.text.trim();
 
-    if (currentUser != null && currentUser!.id != null) {
-      final updatedUser = UserModelLoginSQL(
-        id: currentUser!.id,
-        nama: newNama,
-        nomorhp: newNomor,
-        email: newEmail,
-        password: currentUser!.password,
-        alamat: newDomisili,
-        gambar: currentUser!.gambar,
-      );
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final updatedUser = UserModelFirebase(
+          uid: user.uid,
+          name: newNama,
+          nomor: newNomor,
+          email: newEmail,
+          alamat: newDomisili,
+          createdAt: currentUser?.createdAt ?? DateTime.now(),
+        );
 
-      final success = await DBHelper().updateUser(updatedUser);
-      if (success) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .set(updatedUser.toMap(), SetOptions(merge: true));
+
+        await user.updateDisplayName(newNama);
         await PreferenceHandler.setUserEmail(newEmail);
         currentUser = updatedUser;
       }
+    } catch (e) {
+      debugPrint("Error saving user data: $e");
     }
-    await Future.delayed(const Duration(milliseconds: 200));
 
     if (mounted) {
       setState(() {
