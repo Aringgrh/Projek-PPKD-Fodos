@@ -1,56 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 Widget _buildProductImage(String image) {
-  if (image.startsWith('http://') || image.startsWith('https://')) {
-    return Image.network(
-      image,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: 165,
-      errorBuilder: (context, error, stackTrace) => Container(
-        height: 165,
-        width: double.infinity,
-        color: Colors.grey[200],
-        child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
-      ),
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return Container(
-          height: 165,
-          width: double.infinity,
-          color: Colors.grey[100],
-          child: const Center(
-            child: SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          ),
-        );
-      },
-    );
-  } else if (image.isNotEmpty) {
-    return Image.asset(
-      image,
-      fit: BoxFit.cover,
-      width: double.infinity,
-      height: 165,
-      errorBuilder: (context, error, stackTrace) => Container(
-        height: 165,
-        width: double.infinity,
-        color: Colors.grey[200],
-        child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
-      ),
-    );
-  } else {
-    return Container(
-      height: 165,
-      width: double.infinity,
-      color: Colors.grey[200],
-      child: const Icon(Icons.fastfood, color: Colors.grey, size: 40),
-    );
-  }
+  return AppImageLoader(
+    imageUrl: image,
+    width: double.infinity,
+    height: 165,
+    fit: BoxFit.cover,
+  );
 }
 
 Widget displayProduk({

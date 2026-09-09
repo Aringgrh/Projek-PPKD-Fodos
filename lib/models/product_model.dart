@@ -86,9 +86,51 @@ class ProductModelFirebase {
     );
   }
 
+  /// Normalisasi Map data dari Firestore untuk menangani variasi penamaan field (misal: 'gambar', 'imageUrl', 'image')
+  static Map<String, dynamic> _normalizeMap(Map<String, dynamic> raw) {
+    final map = Map<String, dynamic>.from(raw);
+
+    // Normalisasi Gambar / URL
+    final currentGambar = (map['gambarUrl'] ?? '').toString().trim();
+    if (currentGambar.isEmpty) {
+      final fallback = map['gambar'] ??
+          map['imageUrl'] ??
+          map['image'] ??
+          map['foto'] ??
+          map['fotoUrl'] ??
+          map['photoUrl'] ??
+          map['img'];
+      if (fallback != null) {
+        map['gambarUrl'] = fallback.toString().trim();
+      }
+    }
+
+    // Normalisasi Nama Produk
+    final currentNama = (map['namaProduk'] ?? '').toString().trim();
+    if (currentNama.isEmpty) {
+      final fallbackNama =
+          map['nama_produk'] ?? map['nama'] ?? map['name'] ?? map['title'];
+      if (fallbackNama != null) {
+        map['namaProduk'] = fallbackNama.toString().trim();
+      }
+    }
+
+    // Normalisasi Nama Toko
+    final currentToko = (map['namaToko'] ?? '').toString().trim();
+    if (currentToko.isEmpty) {
+      final fallbackToko =
+          map['nama_toko'] ?? map['toko'] ?? map['store'] ?? map['shop'];
+      if (fallbackToko != null) {
+        map['namaToko'] = fallbackToko.toString().trim();
+      }
+    }
+
+    return map;
+  }
+
   /// Membuat instance [ProductModelFirebase] dari Map / JSON Firestore.
   factory ProductModelFirebase.fromJson(Map<String, dynamic> json) =>
-      _$ProductModelFirebaseFromJson(json);
+      _$ProductModelFirebaseFromJson(_normalizeMap(json));
 
   /// Factory untuk membuat objek langsung dari [DocumentSnapshot] Firestore.
   factory ProductModelFirebase.fromFirestore(

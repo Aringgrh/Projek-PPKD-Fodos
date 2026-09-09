@@ -103,9 +103,48 @@ class CartModelFirebase {
     );
   }
 
+  /// Normalisasi Map data Firestore
+  static Map<String, dynamic> _normalizeMap(Map<String, dynamic> raw) {
+    final map = Map<String, dynamic>.from(raw);
+
+    final currentGambar = (map['gambarUrl'] ?? '').toString().trim();
+    if (currentGambar.isEmpty) {
+      final fallback = map['gambar'] ??
+          map['imageUrl'] ??
+          map['image'] ??
+          map['foto'] ??
+          map['fotoUrl'] ??
+          map['photoUrl'] ??
+          map['img'];
+      if (fallback != null) {
+        map['gambarUrl'] = fallback.toString().trim();
+      }
+    }
+
+    final currentNama = (map['namaProduk'] ?? '').toString().trim();
+    if (currentNama.isEmpty) {
+      final fallbackNama =
+          map['nama_produk'] ?? map['nama'] ?? map['name'] ?? map['title'];
+      if (fallbackNama != null) {
+        map['namaProduk'] = fallbackNama.toString().trim();
+      }
+    }
+
+    final currentToko = (map['namaToko'] ?? '').toString().trim();
+    if (currentToko.isEmpty) {
+      final fallbackToko =
+          map['nama_toko'] ?? map['toko'] ?? map['store'] ?? map['shop'];
+      if (fallbackToko != null) {
+        map['namaToko'] = fallbackToko.toString().trim();
+      }
+    }
+
+    return map;
+  }
+
   /// Membuat instance [CartModelFirebase] dari Map / JSON Firestore.
   factory CartModelFirebase.fromJson(Map<String, dynamic> json) =>
-      _$CartModelFirebaseFromJson(json);
+      _$CartModelFirebaseFromJson(_normalizeMap(json));
 
   /// Factory untuk membuat instance langsung dari [DocumentSnapshot] Firestore.
   factory CartModelFirebase.fromFirestore(
