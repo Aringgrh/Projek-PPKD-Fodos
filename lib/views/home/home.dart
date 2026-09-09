@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
+import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
 import 'package:fodos/views/home/halaman_favorit.dart';
 import 'package:fodos/views/home/halaman_keranjang.dart';
+import 'package:fodos/views/home/halaman_pilih_lokasi.dart';
 import 'package:fodos/views/home/tambah_produk.dart';
 import 'package:fodos/widgets/widget_carousel.dart';
 import 'package:fodos/widgets/widget_display_produk.dart';
@@ -19,6 +21,21 @@ class HomeFodos extends StatefulWidget {
 
 class _HomeFodosState extends State<HomeFodos> {
   int selectedCategoryIndex = 0;
+  String _selectedLocationTitle = 'Jl. Sudirman No. 45';
+  String _selectedLocationSubtitle = 'Sekitar kamu';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocation();
+  }
+
+  void _loadLocation() {
+    setState(() {
+      _selectedLocationTitle = PreferenceHandler.getSelectedLocation();
+      _selectedLocationSubtitle = PreferenceHandler.getSelectedLocationDetail();
+    });
+  }
 
   final List<Map<String, dynamic>> categories = [
     {"name": "Semua", "icon": Icons.menu_book_outlined},
@@ -67,44 +84,63 @@ class _HomeFodosState extends State<HomeFodos> {
                     // Location Info
                     Expanded(
                       child: InkWell(
-                        onTap: () {},
+                        onTap: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const HalamanPilihLokasi(),
+                            ),
+                          );
+                          if (result != null && result is Map<String, dynamic>) {
+                            setState(() {
+                              _selectedLocationTitle =
+                                  result['title'] ?? _selectedLocationTitle;
+                              _selectedLocationSubtitle =
+                                  result['detail'] ?? _selectedLocationSubtitle;
+                            });
+                          } else {
+                            _loadLocation();
+                          }
+                        },
                         borderRadius: BorderRadius.circular(8),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              children: const [
-                                Icon(
+                              children: [
+                                const Icon(
                                   Icons.location_on,
                                   color: AppColors.primary,
                                   size: 20,
                                 ),
-                                SizedBox(width: 4),
+                                const SizedBox(width: 4),
                                 Flexible(
                                   child: Text(
-                                    "Jl. Sudirman No. 45",
+                                    _selectedLocationTitle,
                                     style: AppTextstyle.heading1,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
-                                SizedBox(width: 2),
-                                Icon(
+                                const SizedBox(width: 2),
+                                const Icon(
                                   Icons.keyboard_arrow_down,
                                   color: AppColors.textGrey,
                                   size: 20,
                                 ),
                               ],
                             ),
-                            const Padding(
-                              padding: EdgeInsets.only(left: 24),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 24),
                               child: Text(
-                                "Sekitar kamu",
-                                style: TextStyle(
+                                _selectedLocationSubtitle,
+                                style: const TextStyle(
                                   fontSize: 11,
                                   color: AppColors.textGrey,
                                   fontWeight: FontWeight.w500,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],

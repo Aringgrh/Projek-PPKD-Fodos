@@ -22,6 +22,7 @@ import 'package:fodos/views/profile/profil_alamat.dart';
 import 'package:fodos/views/profile/profil_keamanan.dart';
 import 'package:fodos/views/profile/profil_metode_pembayaran.dart';
 import 'package:fodos/views/profile/profil_tentang_aplikasi.dart';
+import 'package:fodos/views/home/halaman_pilih_lokasi.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -169,5 +170,11 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(320, 568));
     await tester.pumpWidget(createTestWidget(const ProfilTentangAplikasi(), size: const Size(320, 568)));
     expect(find.byType(ProfilTentangAplikasi), findsOneWidget);
+  });
+
+  testWidgets('Test HalamanPilihLokasi View', (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    await tester.pumpWidget(createTestWidget(const HalamanPilihLokasi(), size: const Size(320, 568)));
+    expect(find.byType(HalamanPilihLokasi), findsOneWidget);
   });
 }
