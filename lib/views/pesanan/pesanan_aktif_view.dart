@@ -1,9 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
+import 'package:fodos/models/models.dart';
 
 class PesananAktifView extends StatefulWidget {
-  final int userId;
+  final String userId;
   const PesananAktifView({super.key, required this.userId});
 
   @override
@@ -11,12 +12,31 @@ class PesananAktifView extends StatefulWidget {
 }
 
 class _PesananAktifViewState extends State<PesananAktifView> {
-  Future<void> _selesaikan(int pesananId, String namaProduk) async {
+  Stream<List<OrderModel>> _streamActiveOrders() {
+    if (widget.userId.isEmpty) {
+      return Stream.value([]);
+    }
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: widget.userId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => OrderModel.fromFirestore(doc))
+              .where((order) => order.isAktif)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        });
+  }
+
+  Future<void> _selesaikan(String pesananId, String orderSummary) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Selesaikan Pesanan'),
-        content: Text('Apakah Anda yakin pesanan "$namaProduk" sudah diterima/selesai?'),
+        content: Text(
+          'Apakah Anda yakin pesanan "$orderSummary" sudah diterima/selesai?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -32,25 +52,43 @@ class _PesananAktifViewState extends State<PesananAktifView> {
     );
 
     if (confirm == true) {
-      final success = await DBHelper().selesaikanPesanan(pesananId);
-      if (success && mounted) {
-        setState(() {}); // Refresh list
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pesanan berhasil diselesaikan!'),
-            backgroundColor: AppColors.secondary,
-          ),
-        );
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(pesananId)
+            .update({
+              'status': 'Selesai',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pesanan berhasil diselesaikan!'),
+              backgroundColor: AppColors.secondary,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal menyelesaikan pesanan: $e')),
+          );
+        }
       }
     }
   }
 
-  Future<void> _batalkan(int pesananId, String namaProduk) async {
+  Future<void> _batalkan(String pesananId, String orderSummary) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Batalkan Pesanan', style: TextStyle(color: Colors.red)),
-        content: Text('Apakah Anda yakin ingin membatalkan pesanan "$namaProduk"?'),
+        title: const Text(
+          'Batalkan Pesanan',
+          style: TextStyle(color: Colors.red),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin membatalkan pesanan "$orderSummary"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -66,23 +104,62 @@ class _PesananAktifViewState extends State<PesananAktifView> {
     );
 
     if (confirm == true) {
-      final success = await DBHelper().batalkanPesanan(pesananId);
-      if (success && mounted) {
-        setState(() {}); // Refresh list
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Pesanan telah dibatalkan.'),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
+      try {
+        await FirebaseFirestore.instance
+            .collection('orders')
+            .doc(pesananId)
+            .update({
+              'status': 'Dibatalkan',
+              'updatedAt': FieldValue.serverTimestamp(),
+            });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Pesanan telah dibatalkan.'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Gagal membatalkan pesanan: $e')),
+          );
+        }
       }
     }
   }
 
+  Widget _buildItemImage(String image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
+        ),
+      );
+    } else if (image.isNotEmpty) {
+      return Image.asset(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
+        ),
+      );
+    }
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(Icons.fastfood, color: Colors.grey),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DBHelper().getPesananAktifWithProductDetails(widget.userId),
+    return StreamBuilder<List<OrderModel>>(
+      stream: _streamActiveOrders(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -129,26 +206,28 @@ class _PesananAktifViewState extends State<PesananAktifView> {
           itemCount: activeOrders.length,
           itemBuilder: (context, index) {
             final order = activeOrders[index];
-            final int pesananId = order['pesanan_id'] as int;
-            final String namaMakanan = (order['nama_produk'] ?? '') as String;
-            final String namaToko = (order['nama_toko'] ?? '') as String;
-            final double totalHarga = order['total_harga'] is int 
-                ? (order['total_harga'] as int).toDouble() 
-                : (order['total_harga'] ?? 0.0) as double;
-            final double harga = order['harga'] is int 
-                ? (order['harga'] as int).toDouble() 
-                : (order['harga'] ?? 0.0) as double;
-            final int jumlah = (order['jumlah'] ?? 0) as int;
-            final String gambar = (order['gambar'] ?? '') as String;
-            final String tanggal = (order['tanggal'] ?? '') as String;
-            final String status = (order['status'] ?? 'Sedang Diproses') as String;
+            final firstItem = order.items.isNotEmpty
+                ? order.items.first
+                : OrderItemModel(
+                    productId: '',
+                    namaProduk:
+                        'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}',
+                    gambarUrl: '',
+                    harga: order.totalHarga,
+                  );
+
+            final String summary = order.items.length > 1
+                ? "${firstItem.namaProduk} (+${order.items.length - 1} item lainnya)"
+                : firstItem.namaProduk;
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withValues(alpha: 0.03),
@@ -158,152 +237,137 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(14.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Order header with status and date
+                    // Header: Date & Status Badge
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          tanggal,
+                          order.createdAt.toLocal().toString().substring(0, 16),
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textGrey,
                           ),
                         ),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
-                            color: AppColors.secondary.withValues(alpha: 0.1),
+                            color: AppColors.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: Text(
-                            status,
+                            order.status,
                             style: const TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.secondary,
+                              color: AppColors.primary,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 20, color: AppColors.border),
+                    const Divider(height: 18, color: AppColors.border),
+
+                    // Product & Order Details
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Image Container
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            width: 80,
-                            height: 80,
+                            width: 70,
+                            height: 70,
                             color: Colors.grey[200],
-                            child: gambar.startsWith('assets/')
-                                ? Image.asset(gambar, fit: BoxFit.cover)
-                                : Image.network(gambar, fit: BoxFit.cover),
+                            child: _buildItemImage(firstItem.gambarUrl),
                           ),
                         ),
                         const SizedBox(width: 12),
-
-                        // Title, Shop, Price details
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                namaMakanan,
+                                summary,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.textDark,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                namaToko,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textGrey,
+                              if (firstItem.namaToko.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  firstItem.namaToko,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textGrey,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Qty: $jumlah (@ Rp ${harga.toInt().toString().replaceAllMapped(
-                                            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                            (Match m) => '${m[1]}.',
-                                          )})',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textDark,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      "Total: Rp ${totalHarga.toInt().toString().replaceAllMapped(
-                                            RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                            (Match m) => '${m[1]}.',
-                                          )}",
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.secondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              ],
+                              const SizedBox(height: 6),
+                              Text(
+                                "${order.totalItem} porsi • Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                ),
                               ),
                             ],
                           ),
                         ),
                       ],
                     ),
-                    const Divider(height: 24, color: AppColors.border),
-                    // Action Buttons (Batalkan & Selesaikan)
+                    const SizedBox(height: 12),
+
+                    // Action buttons
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        OutlinedButton(
-                          onPressed: () => _batalkan(pesananId, namaMakanan),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red,
-                            side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => _batalkan(order.id, summary),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                              side: const BorderSide(color: Colors.red),
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: const Text(
+                              'Batalkan',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
-                          child: const Text('Batalkan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                         const SizedBox(width: 10),
-                        ElevatedButton(
-                          onPressed: () => _selesaikan(pesananId, namaMakanan),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.secondary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () => _selesaikan(order.id, summary),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.secondary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            child: const Text(
+                              'Selesai',
+                              style: TextStyle(fontSize: 12),
+                            ),
                           ),
-                          child: const Text('Selesaikan', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ),
                       ],
-                    )
+                    ),
                   ],
                 ),
               ),

@@ -1,6 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/pesanan/pesanan_aktif_view.dart';
 import 'package:fodos/views/pesanan/riwayat_view.dart';
@@ -13,8 +13,7 @@ class PesananTugas12 extends StatefulWidget {
 }
 
 class _PesananTugas12State extends State<PesananTugas12> {
-  int userId = 1;
-  bool _isLoading = true;
+  String userId = '';
 
   @override
   void initState() {
@@ -22,24 +21,12 @@ class _PesananTugas12State extends State<PesananTugas12> {
     _loadUser();
   }
 
-  Future<void> _loadUser() async {
-    try {
-      final email = PreferenceHandler.getUserEmail();
-      if (email != null) {
-        final user = await DBHelper().getUserByEmail(email);
-        if (user != null && user.id != null) {
-          setState(() {
-            userId = user.id!;
-          });
-        }
-      }
-    } catch (e) {
-      debugPrint('Error loading user: $e');
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
+  void _loadUser() {
+    final currentFirebaseUser = FirebaseAuth.instance.currentUser;
+    final uid = currentFirebaseUser?.uid ?? (PreferenceHandler.getUserEmail() ?? 'guest');
+    setState(() {
+      userId = uid;
+    });
   }
 
   static const List<Tab> myTabs = <Tab>[
@@ -49,13 +36,6 @@ class _PesananTugas12State extends State<PesananTugas12> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return DefaultTabController(
       length: myTabs.length,
       child: Scaffold(

@@ -1,15 +1,59 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
+import 'package:fodos/models/models.dart';
 
 class RiwayatView extends StatelessWidget {
-  final int userId;
+  final String userId;
   const RiwayatView({super.key, required this.userId});
+
+  Stream<List<OrderModel>> _streamHistoryOrders() {
+    if (userId.isEmpty) {
+      return Stream.value([]);
+    }
+    return FirebaseFirestore.instance
+        .collection('orders')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map((snapshot) {
+          return snapshot.docs
+              .map((doc) => OrderModel.fromFirestore(doc))
+              .where((order) => !order.isAktif)
+              .toList()
+            ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        });
+  }
+
+  Widget _buildItemImage(String image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
+        ),
+      );
+    } else if (image.isNotEmpty) {
+      return Image.asset(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
+        ),
+      );
+    }
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(Icons.fastfood, color: Colors.grey),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: DBHelper().getRiwayatWithProductDetails(userId),
+    return StreamBuilder<List<OrderModel>>(
+      stream: _streamHistoryOrders(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -56,17 +100,20 @@ class RiwayatView extends StatelessWidget {
           itemCount: historyOrders.length,
           itemBuilder: (context, index) {
             final order = historyOrders[index];
-            final String namaMakanan = (order['nama_produk'] ?? '') as String;
-            final String namaToko = (order['nama_toko'] ?? '') as String;
-            final double totalHarga = order['total_harga'] is int
-                ? (order['total_harga'] as int).toDouble()
-                : (order['total_harga'] ?? 0.0) as double;
-            final int jumlah = (order['jumlah'] ?? 0) as int;
-            final String gambar = (order['gambar'] ?? '') as String;
-            final String tanggal = (order['tanggal'] ?? '') as String;
-            final String status = (order['status'] ?? 'Selesai') as String;
+            final firstItem = order.items.isNotEmpty
+                ? order.items.first
+                : OrderItemModel(
+                    productId: '',
+                    namaProduk:
+                        'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}',
+                    gambarUrl: '',
+                    harga: order.totalHarga,
+                  );
 
-            final bool isSelesai = status.toLowerCase() == 'selesai';
+            final bool isSelesai = order.status.toLowerCase() == 'selesai';
+            final String summary = order.items.length > 1
+                ? "${firstItem.namaProduk} (+${order.items.length - 1} item lainnya)"
+                : firstItem.namaProduk;
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -85,7 +132,7 @@ class RiwayatView extends StatelessWidget {
                 ],
               ),
               child: Padding(
-                padding: const EdgeInsets.all(12.0),
+                padding: const EdgeInsets.all(14.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -94,7 +141,7 @@ class RiwayatView extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          tanggal,
+                          order.createdAt.toLocal().toString().substring(0, 16),
                           style: const TextStyle(
                             fontSize: 11,
                             color: AppColors.textGrey,
@@ -102,7 +149,7 @@ class RiwayatView extends StatelessWidget {
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
+                            horizontal: 10,
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
@@ -112,9 +159,9 @@ class RiwayatView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(30),
                           ),
                           child: Text(
-                            status,
+                            order.status,
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: isSelesai
                                   ? Colors.green[800]
@@ -124,7 +171,7 @@ class RiwayatView extends StatelessWidget {
                         ),
                       ],
                     ),
-                    const Divider(height: 20, color: AppColors.border),
+                    const Divider(height: 18, color: AppColors.border),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -132,12 +179,10 @@ class RiwayatView extends StatelessWidget {
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            width: 80,
-                            height: 80,
+                            width: 70,
+                            height: 70,
                             color: Colors.grey[200],
-                            child: gambar.startsWith('assets/')
-                                ? Image.asset(gambar, fit: BoxFit.cover)
-                                : Image.network(gambar, fit: BoxFit.cover),
+                            child: _buildItemImage(firstItem.gambarUrl),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -148,52 +193,33 @@ class RiwayatView extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                namaMakanan,
+                                summary,
                                 style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.textDark,
                                 ),
-                                maxLines: 1,
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                namaToko,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: AppColors.textGrey,
+                              if (firstItem.namaToko.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  firstItem.namaToko,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textGrey,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Qty: $jumlah',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textDark,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  FittedBox(
-                                    fit: BoxFit.scaleDown,
-                                    child: Text(
-                                      "Total: Rp ${totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.secondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              ],
+                              const SizedBox(height: 6),
+                              Text(
+                                "${order.totalItem} porsi • Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.secondary,
+                                ),
                               ),
                             ],
                           ),
