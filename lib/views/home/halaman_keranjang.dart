@@ -1,7 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
-import 'package:fodos/database/db_helper.dart';
-import 'package:fodos/model/pesanan_aktif_model.dart';
+import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
 
 class HalamanKeranjang extends StatefulWidget {
@@ -12,9 +13,8 @@ class HalamanKeranjang extends StatefulWidget {
 }
 
 class _HalamanKeranjangState extends State<HalamanKeranjang> {
-  int userId = 1;
-  double totalCartPrice = 0.0;
-  Set<int> selectedCartIds = {};
+  String userId = '';
+  Set<String> selectedCartIds = {};
   bool _isInitialized = false;
 
   @override
@@ -23,124 +23,191 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
     _loadUser();
   }
 
-  Future<void> _loadUser() async {
-    final email =  PreferenceHandler.getUserEmail();
-    if (email != null) {
-      final user = await DBHelper().getUserByEmail(email);
-      if (user != null && user.id != null) {
-        setState(() {
-          userId = user.id!;
-        });
-      }
-    }
-  }
-
-  void _calculateTotal(List<Map<String, dynamic>> cartItems) {
-    double total = 0;
-    for (var item in cartItems) {
-      final cartId = item['cart_id'] as int;
-      if (selectedCartIds.contains(cartId)) {
-        final double harga = item['harga'] is int 
-            ? (item['harga'] as int).toDouble() 
-            : (item['harga'] ?? 0.0) as double;
-        final int jumlah = (item['jumlah'] ?? 0) as int;
-        total += harga * jumlah;
-      }
-    }
-    // Update state after build completes to avoid setState during build errors
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && totalCartPrice != total) {
-        setState(() {
-          totalCartPrice = total;
-        });
-      }
+  void _loadUser() {
+    final currentFirebaseUser = FirebaseAuth.instance.currentUser;
+    final uid =
+        currentFirebaseUser?.uid ??
+        (PreferenceHandler.getUserEmail() ?? 'guest');
+    setState(() {
+      userId = uid;
     });
   }
 
-  Future<void> _checkout(List<Map<String, dynamic>> cartItems) async {
-    final selectedItems = cartItems.where((item) => selectedCartIds.contains(item['cart_id'])).toList();
+  Stream<List<CartModel>> _streamCart() {
+    if (userId.isEmpty) {
+      return Stream.value([]);
+    }
+    return FirebaseFirestore.instance
+        .collection('carts')
+        .where('userId', isEqualTo: userId)
+        .snapshots()
+        .map(
+          (snapshot) =>
+              snapshot.docs.map((doc) => CartModel.fromFirestore(doc)).toList(),
+        );
+  }
+
+  double _calculateTotal(List<CartModel> cartItems) {
+    double total = 0;
+    for (var item in cartItems) {
+      if (selectedCartIds.contains(item.id)) {
+        total += item.subtotal;
+      }
+    }
+    return total;
+  }
+
+  Future<void> _updateQuantity(String cartId, int newQuantity) async {
+    if (newQuantity <= 0) return;
+    try {
+      await FirebaseFirestore.instance.collection('carts').doc(cartId).update({
+        'jumlah': newQuantity,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal mengubah jumlah: $e')));
+      }
+    }
+  }
+
+  Future<void> _deleteCartItem(String cartId) async {
+    try {
+      await FirebaseFirestore.instance.collection('carts').doc(cartId).delete();
+      setState(() {
+        selectedCartIds.remove(cartId);
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal menghapus item: $e')));
+      }
+    }
+  }
+
+  Future<void> _checkout(List<CartModel> cartItems) async {
+    final selectedItems = cartItems
+        .where((item) => selectedCartIds.contains(item.id))
+        .toList();
+
     if (selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih minimal satu produk untuk dipesan')),
+        const SnackBar(
+          content: Text('Pilih minimal satu produk untuk dipesan'),
+          duration: Duration(seconds: 2),
+        ),
       );
       return;
     }
 
-    // Periksa stok produk untuk semua item yang dipilih
-    for (var item in selectedItems) {
-      final produkId = item['produk_id'] as int;
-      final jumlah = item['jumlah'] as int;
-      final namaProduk = (item['nama_produk'] ?? 'Produk') as String;
-      final latestProduk = await DBHelper().getProdukById(produkId);
-      final currentStok = latestProduk?.stok ?? 0;
-
-      if (currentStok < jumlah) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                currentStok <= 0
-                    ? 'Stok "$namaProduk" telah habis!'
-                    : 'Stok "$namaProduk" tidak mencukupi (sisa: $currentStok porsi).',
-              ),
-              backgroundColor: Colors.red,
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      final orderItems = selectedItems
+          .map(
+            (item) => OrderItemModel(
+              productId: item.productId,
+              namaProduk: item.namaProduk,
+              namaToko: item.namaToko,
+              gambarUrl: item.gambarUrl,
+              harga: item.harga,
+              jumlah: item.jumlah,
+              catatan: item.catatan,
             ),
-          );
-        }
-        return;
-      }
-    }
+          )
+          .toList();
 
-    for (var item in selectedItems) {
-      final produkId = item['produk_id'] as int;
-      final jumlah = item['jumlah'] as int;
-      final double harga = item['harga'] is int 
-          ? (item['harga'] as int).toDouble() 
-          : (item['harga'] ?? 0.0) as double;
-      final gambar = (item['gambar'] ?? '') as String;
-
-      final pesanan = PesananAktifModel(
-        userId: userId,
-        produkId: produkId,
-        jumlah: jumlah,
-        totalHarga: harga * jumlah,
-        tanggal: DateTime.now().toLocal().toString().substring(0, 16),
-        status: 'Sedang Diproses',
-        gambar: gambar,
+      final totalHarga = orderItems.fold(
+        0.0,
+        (total, item) => total + item.subtotal,
       );
 
-      await DBHelper().insertPesananAktif(pesanan);
-      // Remove checked out item from database cart
-      await DBHelper().deleteKeranjang(item['cart_id'] as int);
-    }
+      final order = OrderModel(
+        userId: userId,
+        userName: user?.displayName ?? 'Pengguna Fodos',
+        userPhone: user?.phoneNumber ?? '',
+        alamatPengiriman: 'Jl. Sudirman No. 45, Jakarta',
+        items: orderItems,
+        totalHarga: totalHarga,
+        metodePembayaran: 'Tunai saat Pengambilan',
+        status: 'Diproses',
+      );
 
-    // Reset selection state
-    setState(() {
-      _isInitialized = false;
-      selectedCartIds.clear();
-      totalCartPrice = 0.0;
-    });
+      // 1. Tambahkan ke Firestore orders
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .add(order.toFirestore());
 
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Pesanan Berhasil'),
-          content: const Text(
-            'Pesanan Anda telah berhasil dibuat! Silakan cek di tab "Pesanan".',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context, true); // Back to Home with result
-              },
-              child: const Text('OK'),
+      // 2. Hapus item dari koleksi carts
+      for (var item in selectedItems) {
+        if (item.id.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('carts')
+              .doc(item.id)
+              .delete();
+        }
+      }
+
+      // Reset selection state
+      setState(() {
+        selectedCartIds.clear();
+      });
+
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Pesanan Berhasil'),
+            content: const Text(
+              'Pesanan Anda telah berhasil dibuat! Silakan cek di tab "Pesanan".',
             ),
-          ],
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context, true);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Gagal melakukan checkout: $e')));
+      }
+    }
+  }
+
+  Widget _buildItemImage(String image) {
+    if (image.startsWith('http://') || image.startsWith('https://')) {
+      return Image.network(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
+        ),
+      );
+    } else if (image.isNotEmpty) {
+      return Image.asset(
+        image,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: Colors.grey[200],
+          child: const Icon(Icons.fastfood, color: Colors.grey),
         ),
       );
     }
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(Icons.fastfood, color: Colors.grey),
+    );
   }
 
   @override
@@ -150,14 +217,17 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
       appBar: AppBar(
         title: const Text(
           'Keranjang Penyelamatan',
-          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textDark),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textDark,
+          ),
         ),
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textDark,
         elevation: 0.5,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: DBHelper().getCartWithProductDetails(userId),
+      body: StreamBuilder<List<CartModel>>(
+        stream: _streamCart(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -196,14 +266,14 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
           }
 
           final cartItems = snapshot.data!;
-          
+
           // Initialize selection: Select all items by default on first load
           if (!_isInitialized) {
-            selectedCartIds = cartItems.map((item) => item['cart_id'] as int).toSet();
+            selectedCartIds = cartItems.map((item) => item.id).toSet();
             _isInitialized = true;
           }
 
-          _calculateTotal(cartItems);
+          final totalCartPrice = _calculateTotal(cartItems);
 
           return Stack(
             children: [
@@ -212,23 +282,20 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                 itemCount: cartItems.length,
                 itemBuilder: (context, index) {
                   final item = cartItems[index];
-                  final int cartId = item['cart_id'] as int;
-                  final String namaMakanan = (item['nama_produk'] ?? '') as String;
-                  final String namaToko = (item['nama_toko'] ?? '') as String;
-                  final double harga = item['harga'] is int 
-                      ? (item['harga'] as int).toDouble() 
-                      : (item['harga'] ?? 0.0) as double;
-                  final int jumlah = (item['jumlah'] ?? 0) as int;
-                  final String gambar = (item['gambar'] ?? '') as String;
-                  final bool isSelected = selectedCartIds.contains(cartId);
+                  final bool isSelected = selectedCartIds.contains(item.id);
 
                   return Container(
                     margin: const EdgeInsets.symmetric(vertical: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                      border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.5),
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.02),
@@ -249,24 +316,22 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                           onChanged: (bool? checked) {
                             setState(() {
                               if (checked == true) {
-                                selectedCartIds.add(cartId);
+                                selectedCartIds.add(item.id);
                               } else {
-                                selectedCartIds.remove(cartId);
+                                selectedCartIds.remove(item.id);
                               }
                             });
                           },
                         ),
 
-                        // Image
+                        // Image Container
                         ClipRRect(
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
-                            width: 75,
-                            height: 75,
+                            width: 70,
+                            height: 70,
                             color: Colors.grey[200],
-                            child: gambar.startsWith('assets/')
-                                ? Image.asset(gambar, fit: BoxFit.cover)
-                                : Image.network(gambar, fit: BoxFit.cover),
+                            child: _buildItemImage(item.gambarUrl),
                           ),
                         ),
                         const SizedBox(width: 10),
@@ -277,29 +342,28 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                namaMakanan,
+                                item.namaProduk,
                                 style: const TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.bold,
                                   color: AppColors.textDark,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2),
-                              Text(
-                                namaToko,
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  color: AppColors.textGrey,
+                              if (item.namaToko.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  item.namaToko,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textGrey,
+                                  ),
                                 ),
-                              ),
+                              ],
                               const SizedBox(height: 6),
                               Text(
-                                "Rp ${harga.toInt().toString().replaceAllMapped(
-                                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                      (Match m) => '${m[1]}.',
-                                    )}",
+                                "Rp ${item.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
                                 style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -310,81 +374,95 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                           ),
                         ),
 
-                        // Controls (Qty & Delete)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 4.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              IconButton(
-                                constraints: const BoxConstraints(),
-                                padding: EdgeInsets.zero,
-                                onPressed: () async {
-                                  await DBHelper().deleteKeranjang(cartId);
-                                  setState(() {
-                                    selectedCartIds.remove(cartId);
-                                  });
-                                },
-                                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                        // Quantity controls and Delete button
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            IconButton(
+                              onPressed: () => _deleteCartItem(item.id),
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: 20,
+                                color: Colors.grey,
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppColors.border),
-                                  borderRadius: BorderRadius.circular(30),
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.all(6),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                InkWell(
+                                  onTap: () {
+                                    if (item.jumlah > 1) {
+                                      _updateQuantity(item.id, item.jumlah - 1);
+                                    } else {
+                                      _deleteCartItem(item.id);
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[200],
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.remove,
+                                      size: 14,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
                                 ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    GestureDetector(
-                                      onTap: () async {
-                                        if (jumlah > 1) {
-                                          await DBHelper().updateKeranjangJumlah(cartId, jumlah - 1);
-                                          setState(() {});
-                                        }
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-                                        child: Icon(Icons.remove, size: 12, color: AppColors.primary),
-                                      ),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8.0,
+                                  ),
+                                  child: Text(
+                                    '${item.jumlah}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
-                                    Text(
-                                      '$jumlah',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                        color: AppColors.textDark,
-                                      ),
-                                    ),
-                                    GestureDetector(
-                                      onTap: () async {
-                                        await DBHelper().updateKeranjangJumlah(cartId, jumlah + 1);
-                                        setState(() {});
-                                      },
-                                      child: const Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: 6.0, vertical: 4.0),
-                                        child: Icon(Icons.add, size: 12, color: AppColors.primary),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
+                                InkWell(
+                                  onTap: () =>
+                                      _updateQuantity(item.id, item.jumlah + 1),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.add,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
+                        const SizedBox(width: 4),
                       ],
                     ),
                   );
                 },
               ),
 
-              // Bottom Total Sheet
+              // Bottom Total & Checkout Bar
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     boxShadow: [
@@ -396,63 +474,49 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                     ],
                   ),
                   child: SafeArea(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(
-                              child: Text(
-                                'Total Penyelamatan (${selectedCartIds.length} item)',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textGrey,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                            const Text(
+                              'Total Pembayaran',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textGrey,
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                "Rp ${totalCartPrice.toInt().toString().replaceAllMapped(
-                                      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                                      (Match m) => '${m[1]}.',
-                                    )}",
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.secondary,
-                                ),
+                            const SizedBox(height: 2),
+                            Text(
+                              "Rp ${totalCartPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.secondary,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton(
-                            onPressed: selectedCartIds.isEmpty ? null : () => _checkout(cartItems),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
-                              foregroundColor: Colors.white,
-                              disabledBackgroundColor: Colors.grey[300],
-                              disabledForegroundColor: Colors.grey[600],
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                              elevation: 0,
+                        ElevatedButton(
+                          onPressed: () => _checkout(cartItems),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.secondary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 14,
                             ),
-                            child: const Text(
-                              'Konfirmasi Penyelamatan',
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Text(
+                            'Pesan Sekarang',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
