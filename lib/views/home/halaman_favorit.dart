@@ -5,6 +5,7 @@ import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/detail_makanan.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 class HalamanFavorit extends StatefulWidget {
   const HalamanFavorit({super.key});
@@ -47,52 +48,70 @@ class _HalamanFavoritState extends State<HalamanFavorit> {
         );
   }
 
-  Future<void> _removeFavorite(String docId) async {
-    try {
-      await FirebaseFirestore.instance
-          .collection('favorites')
-          .doc(docId)
-          .delete();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dihapus dari Favorit'),
-            duration: Duration(seconds: 1),
+  Future<void> _removeFavorite(String docId, String namaProduk) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Hapus dari Favorit',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus "$namaProduk" dari daftar favorit?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Batal',
+              style: TextStyle(color: AppColors.textGrey),
+            ),
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal menghapus favorit: $e')));
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text(
+              'Hapus',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('favorites')
+            .doc(docId)
+            .delete();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dihapus dari Favorit'),
+              duration: Duration(seconds: 1),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Gagal menghapus favorit: $e')));
+        }
       }
     }
   }
 
   Widget _buildItemImage(String image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    } else if (image.isNotEmpty) {
-      return Image.asset(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    }
-    return Container(
-      color: Colors.grey[200],
-      child: const Icon(Icons.fastfood, color: Colors.grey),
+    return AppImageLoader(
+      imageUrl: image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 
@@ -291,7 +310,8 @@ class _HalamanFavoritState extends State<HalamanFavorit> {
 
                         // Remove Favorite Button
                         IconButton(
-                          onPressed: () => _removeFavorite(fav.id),
+                          onPressed: () =>
+                              _removeFavorite(fav.id, fav.namaProduk),
                           icon: const Icon(Icons.favorite, color: Colors.red),
                           tooltip: 'Hapus dari Favorit',
                         ),
