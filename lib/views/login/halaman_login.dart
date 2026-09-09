@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
+import 'package:fodos/service/auth_service.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
+import 'package:fodos/views/login/halaman_lupa_password.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
 import 'package:fodos/widgets/widget_login.dart';
 
@@ -19,6 +21,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
   final _formKey = GlobalKey<FormState>();
   bool hide = true;
   bool isLoading = false;
+  bool isGoogleLoading = false;
 
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passwordC = TextEditingController();
@@ -28,6 +31,68 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     emailC.dispose();
     passwordC.dispose();
     super.dispose();
+  }
+
+  Future<void> loginWithGoogle() async {
+    if (isGoogleLoading || isLoading) return;
+    setState(() {
+      isGoogleLoading = true;
+    });
+
+    try {
+      final userCredential = await AuthService().signInWithGoogle();
+
+      // Jika userCredential == null, berarti user membatalkan dialog login Google
+      if (userCredential != null && userCredential.user != null) {
+        if (!mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Login Google berhasil! Selamat datang, ${userCredential.user?.displayName ?? "Pengguna"}.',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        context.pushAndRemoveAll(const BottomNavTugas12());
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Gagal masuk dengan akun Google.';
+      if (e.code == 'account-exists-with-different-credential') {
+        errorMessage = 'Akun email ini sudah terdaftar dengan metode masuk lain.';
+      } else if (e.code == 'invalid-credential') {
+        errorMessage = 'Kredensial akun Google tidak valid.';
+      } else if (e.code == 'user-disabled') {
+        errorMessage = 'Akun Google ini telah dinonaktifkan di sistem.';
+      } else if (e.code == 'network-request-failed') {
+        errorMessage = 'Gagal terhubung ke jaringan! Periksa koneksi internet Anda.';
+      } else if (e.message != null && e.message!.isNotEmpty) {
+        errorMessage = e.message!;
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Terjadi kesalahan saat login Google: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          isGoogleLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> loginPengguna() async {
@@ -109,123 +174,6 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
         });
       }
     }
-  }
-
-  void _showForgotPasswordDialog() {
-    final resetEmailC = TextEditingController(text: emailC.text.trim());
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        bool isResetting = false;
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text("Reset Kata Sandi"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    "Masukkan email akun Anda untuk menerima tautan reset kata sandi.",
-                    style: TextStyle(fontSize: 13, color: AppColors.textGrey),
-                  ),
-                  const SizedBox(height: 14),
-                  TextField(
-                    controller: resetEmailC,
-                    keyboardType: TextInputType.emailAddress,
-                    decoration: InputDecoration(
-                      hintText: "Masukkan Email",
-                      prefixIcon: const Icon(
-                        Icons.email_outlined,
-                        color: AppColors.primary,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text("Batal"),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  onPressed: isResetting
-                      ? null
-                      : () async {
-                          final email = resetEmailC.text.trim();
-                          if (email.isEmpty || !email.contains("@")) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text("Masukkan email yang valid!"),
-                              ),
-                            );
-                            return;
-                          }
-                          final messenger = ScaffoldMessenger.of(context);
-                          setDialogState(() => isResetting = true);
-                          try {
-                            await FirebaseAuth.instance
-                                .sendPasswordResetEmail(email: email);
-                            if (ctx.mounted) {
-                              Navigator.pop(ctx);
-                            }
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  "Tautan reset kata sandi telah dikirim ke email Anda.",
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          } catch (e) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text("Gagal mengirim email reset: $e"),
-                                backgroundColor: Colors.redAccent,
-                              ),
-                            );
-                          } finally {
-                            if (ctx.mounted) {
-                              setDialogState(() => isResetting = false);
-                            }
-                          }
-                        },
-                  child: isResetting
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          "Kirim",
-                          style: TextStyle(color: Colors.white),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
   }
 
   @override
@@ -426,7 +374,9 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _showForgotPasswordDialog,
+                      onPressed: () {
+                        context.push(const HalamanLupaPassword());
+                      },
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(
                           vertical: 4,
@@ -517,7 +467,8 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                         child: buildSocialHButton(
                           iconPath: "assets/images/googleIcon.png",
                           label: "Google",
-                          onTap: () {},
+                          isLoading: isGoogleLoading,
+                          onTap: loginWithGoogle,
                         ),
                       ),
                       const SizedBox(width: 14),
@@ -525,7 +476,13 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
                         child: buildSocialHButton(
                           iconPath: "assets/images/fbIcon.png",
                           label: "Facebook",
-                          onTap: () {},
+                          onTap: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Login Facebook belum tersedia."),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     ],

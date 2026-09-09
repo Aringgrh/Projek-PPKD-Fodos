@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
-import 'package:fodos/service/preferencehandler.dart';
+import 'package:fodos/service/auth_service.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/profile/informasi_pribadi.dart';
 import 'package:fodos/views/profile/profil_alamat.dart';
 import 'package:fodos/views/profile/profil_keamanan.dart';
-import 'package:fodos/views/profile/profil_metode_pembayaran.dart';
 import 'package:fodos/views/profile/profil_tentang_aplikasi.dart';
 import 'package:fodos/widgets/widget_profile.dart';
 
@@ -200,27 +199,6 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                     ),
                     menuProfil(
                       onPressed: () {
-                        context.push(const MetodePembayaranProfile());
-                      },
-                      leading: const Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: Color(0xFF404941),
-                        size: 22,
-                      ),
-                      title: "Metode Pembayaran",
-                      subtitle: "Gopay, ShopeePay, Kartu Kredit",
-                      trailing: const Icon(
-                        Icons.keyboard_arrow_right,
-                        color: AppColors.textGrey,
-                      ),
-                    ),
-                    const Divider(
-                      height: 1,
-                      thickness: 1,
-                      color: AppColors.border,
-                    ),
-                    menuProfil(
-                      onPressed: () {
                         context.push(const ProfilAlamat());
                       },
                       leading: const Icon(
@@ -284,9 +262,9 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                     ),
                     menuProfil(
                       onPressed: () async {
-                        await PreferenceHandler.logOut();
+                        await AuthService().signOut();
                         if (context.mounted) {
-                          context.push(const HalamanLoginFodos());
+                          context.pushAndRemoveAll(const HalamanLoginFodos());
                         }
                       },
                       leading: const Icon(
