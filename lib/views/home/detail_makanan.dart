@@ -2,8 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
+import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
+import 'package:fodos/views/home/halaman_pembayaran.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 class DetailMakanan extends StatefulWidget {
   final ProductModel produk;
@@ -164,82 +167,24 @@ class _DetailMakananState extends State<DetailMakanan> {
     }
   }
 
-  Future<void> _pesanSekarang() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      final double totalPrice = widget.produk.harga * quantity;
+  void _pesanSekarang() {
+    final item = OrderItemModel(
+      productId: widget.produk.id,
+      namaProduk: widget.produk.namaProduk,
+      namaToko: widget.produk.namaToko,
+      gambarUrl: widget.produk.gambarUrl,
+      harga: widget.produk.harga,
+      jumlah: quantity,
+      catatan: 'Penyelamatan Surplus',
+    );
 
-      final pesanan = OrderModel(
-        userId: userId,
-        userName: user?.displayName ?? 'Pengguna Fodos',
-        userPhone: user?.phoneNumber ?? '',
-        alamatPengiriman: 'Jl. Sudirman No. 45, Jakarta',
-        items: [
-          OrderItemModel(
-            productId: widget.produk.id,
-            namaProduk: widget.produk.namaProduk,
-            namaToko: widget.produk.namaToko,
-            gambarUrl: widget.produk.gambarUrl,
-            harga: widget.produk.harga,
-            jumlah: quantity,
-            catatan: 'Penyelamatan Surplus',
-          ),
-        ],
-        totalHarga: totalPrice,
-        totalItem: quantity,
-        status: 'Diproses',
-        metodePembayaran: 'Tunai saat Pengambilan',
-      );
-
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .add(pesanan.toFirestore());
-
-      // Kurangi stok jika ada ID dokumen
-      if (widget.produk.id.isNotEmpty) {
-        try {
-          final prodDoc = FirebaseFirestore.instance
-              .collection('products')
-              .doc(widget.produk.id);
-          await FirebaseFirestore.instance.runTransaction((transaction) async {
-            final snapshot = await transaction.get(prodDoc);
-            if (snapshot.exists) {
-              final currentStok =
-                  snapshot.data()?['stok'] as int? ?? widget.produk.stok;
-              final newStok = (currentStok - quantity).clamp(0, 999999).toInt();
-              transaction.update(prodDoc, {'stok': newStok});
-            }
-          });
-        } catch (_) {}
-      }
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Pesanan Berhasil'),
-            content: Text(
-              '${widget.produk.namaProduk} sebanyak $quantity porsi berhasil dipesan! Cek status di tab "Pesanan".',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context, true);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal membuat pesanan: $e')));
-      }
-    }
+    context.push(
+      HalamanPembayaran(
+        items: [item],
+        namaToko: widget.produk.namaToko,
+        isFromCart: false,
+      ),
+    );
   }
 
   @override
@@ -259,17 +204,14 @@ class _DetailMakananState extends State<DetailMakanan> {
                 // Top Image Cover
                 Hero(
                   tag: 'produk_image_${widget.produk.id}',
-                  child: Container(
+                  child: SizedBox(
                     height: 320,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      image: DecorationImage(
-                        image: widget.produk.gambar.startsWith('assets/')
-                            ? AssetImage(widget.produk.gambar) as ImageProvider
-                            : NetworkImage(widget.produk.gambar),
-                        fit: BoxFit.cover,
-                      ),
+                    child: AppImageLoader(
+                      imageUrl: widget.produk.gambar,
+                      height: 320,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
@@ -789,7 +731,6 @@ class _DetailMakananState extends State<DetailMakanan> {
                         Expanded(
                           child: ElevatedButton.icon(
                             onPressed: _pesanSekarang,
-                            icon: const Icon(Icons.flash_on, size: 18),
                             label: const Text(
                               'Pesan Sekarang',
                               style: TextStyle(

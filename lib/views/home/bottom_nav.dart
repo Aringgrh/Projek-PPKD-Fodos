@@ -7,14 +7,22 @@ import 'package:fodos/views/search/search.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 
 class BottomNavTugas12 extends StatefulWidget {
-  const BottomNavTugas12({super.key});
+  final int initialIndex;
+  const BottomNavTugas12({super.key, this.initialIndex = 0});
 
   @override
   State<BottomNavTugas12> createState() => _BottomNavTugas12State();
 }
 
 class _BottomNavTugas12State extends State<BottomNavTugas12> {
-  int pilihan = 0;
+  late int pilihan;
+
+  @override
+  void initState() {
+    super.initState();
+    pilihan = widget.initialIndex;
+  }
+
   void changeBottom(int index) {
     pilihan = index;
     setState(() {});

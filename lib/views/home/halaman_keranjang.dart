@@ -2,8 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
+import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/service/preferencehandler.dart';
+import 'package:fodos/views/home/halaman_pembayaran.dart';
+import 'package:fodos/widgets/app_image_loader.dart';
 
 class HalamanKeranjang extends StatefulWidget {
   const HalamanKeranjang({super.key});
@@ -88,7 +91,7 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
     }
   }
 
-  Future<void> _checkout(List<CartModel> cartItems) async {
+  void _checkout(List<CartModel> cartItems) {
     final selectedItems = cartItems
         .where((item) => selectedCartIds.contains(item.id))
         .toList();
@@ -103,110 +106,41 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
       return;
     }
 
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      final orderItems = selectedItems
-          .map(
-            (item) => OrderItemModel(
-              productId: item.productId,
-              namaProduk: item.namaProduk,
-              namaToko: item.namaToko,
-              gambarUrl: item.gambarUrl,
-              harga: item.harga,
-              jumlah: item.jumlah,
-              catatan: item.catatan,
-            ),
-          )
-          .toList();
-
-      final totalHarga = orderItems.fold(
-        0.0,
-        (total, item) => total + item.subtotal,
-      );
-
-      final order = OrderModel(
-        userId: userId,
-        userName: user?.displayName ?? 'Pengguna Fodos',
-        userPhone: user?.phoneNumber ?? '',
-        alamatPengiriman: 'Jl. Sudirman No. 45, Jakarta',
-        items: orderItems,
-        totalHarga: totalHarga,
-        metodePembayaran: 'Tunai saat Pengambilan',
-        status: 'Diproses',
-      );
-
-      // 1. Tambahkan ke Firestore orders
-      await FirebaseFirestore.instance
-          .collection('orders')
-          .add(order.toFirestore());
-
-      // 2. Hapus item dari koleksi carts
-      for (var item in selectedItems) {
-        if (item.id.isNotEmpty) {
-          await FirebaseFirestore.instance
-              .collection('carts')
-              .doc(item.id)
-              .delete();
-        }
-      }
-
-      // Reset selection state
-      setState(() {
-        selectedCartIds.clear();
-      });
-
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Pesanan Berhasil'),
-            content: const Text(
-              'Pesanan Anda telah berhasil dibuat! Silakan cek di tab "Pesanan".',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context, true);
-                },
-                child: const Text('OK'),
-              ),
-            ],
+    final orderItems = selectedItems
+        .map(
+          (item) => OrderItemModel(
+            productId: item.productId,
+            namaProduk: item.namaProduk,
+            namaToko: item.namaToko,
+            gambarUrl: item.gambarUrl,
+            harga: item.harga,
+            jumlah: item.jumlah,
+            catatan: item.catatan,
           ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal melakukan checkout: $e')));
-      }
-    }
+        )
+        .toList();
+
+    final cartDocIds = selectedItems
+        .map((item) => item.id)
+        .where((id) => id.isNotEmpty)
+        .toList();
+
+    context.push(
+      HalamanPembayaran(
+        items: orderItems,
+        namaToko: orderItems.first.namaToko,
+        isFromCart: true,
+        cartItemDocIds: cartDocIds,
+      ),
+    );
   }
 
   Widget _buildItemImage(String image) {
-    if (image.startsWith('http://') || image.startsWith('https://')) {
-      return Image.network(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    } else if (image.isNotEmpty) {
-      return Image.asset(
-        image,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) => Container(
-          color: Colors.grey[200],
-          child: const Icon(Icons.fastfood, color: Colors.grey),
-        ),
-      );
-    }
-    return Container(
-      color: Colors.grey[200],
-      child: const Icon(Icons.fastfood, color: Colors.grey),
+    return AppImageLoader(
+      imageUrl: image,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
     );
   }
 
