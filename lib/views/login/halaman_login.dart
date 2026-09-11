@@ -4,7 +4,6 @@ import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/auth_service.dart';
-import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_lupa_password.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
@@ -110,15 +109,12 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(email: user, password: pass);
+      final userCredential = await AuthService().signInWithEmail(
+        email: user,
+        password: pass,
+      );
 
       if (userCredential.user != null) {
-        await PreferenceHandler.setLogin(true);
-        await PreferenceHandler.setUserEmail(
-          userCredential.user?.email ?? user,
-        );
-
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(

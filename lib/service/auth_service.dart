@@ -79,6 +79,101 @@ class AuthService {
     }
   }
 
+  /// Melakukan proses Login menggunakan Email dan Password via Firebase Authentication.
+  Future<UserCredential> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final userCredential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        await PreferenceHandler.setLogin(true);
+        await PreferenceHandler.setUserEmail(user.email ?? email);
+        if (user.photoURL != null && user.photoURL!.isNotEmpty) {
+          await PreferenceHandler.setUserProfileImage(user.photoURL!);
+        }
+      }
+
+      return userCredential;
+    } catch (e) {
+      debugPrint('AuthService.signInWithEmail error: $e');
+      rethrow;
+    }
+  }
+
+  /// Melakukan proses Registrasi Akun baru menggunakan Email & Password,
+  /// lalu menyimpan profil lengkap pengguna ke Cloud Firestore (`users`).
+  Future<UserCredential> signUpWithEmail({
+    required String name,
+    required String nomor,
+    required String email,
+    required String password,
+    required String alamat,
+  }) async {
+    try {
+      // 1. Buat akun di Firebase Authentication
+      final userCredential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = userCredential.user;
+      if (user != null) {
+        // Update display name
+        await user.updateDisplayName(name);
+
+        // 2. Simpan data user ke Firestore
+        final newUser = UserModelFirebase(
+          uid: user.uid,
+          name: name,
+          nomor: nomor,
+          email: email,
+          alamat: alamat,
+          createdAt: DateTime.now(),
+        );
+
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .set(newUser.toMap());
+      }
+
+      return userCredential;
+    } catch (e) {
+      debugPrint('AuthService.signUpWithEmail error: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengirimkan tautan reset kata sandi ke email pengguna.
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+    } catch (e) {
+      debugPrint('AuthService.sendPasswordResetEmail error: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengambil data profil user dari Cloud Firestore berdasarkan UID.
+  Future<UserModelFirebase?> getUserData(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        return UserModelFirebase.fromJson(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('AuthService.getUserData error: $e');
+      return null;
+    }
+  }
+
   /// Sign out dari Firebase Auth, Google Sign-In, serta menghapus cache lokal SharedPreferences.
   Future<void> signOut() async {
     try {
