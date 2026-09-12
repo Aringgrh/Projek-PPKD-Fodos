@@ -16,7 +16,8 @@ Widget displayProduk({
   required String namaMakanan,
   required String namaToko,
   required String sisaPorsi,
-  required String pickUp,
+  String? pickUp,
+  String? alamat,
   String harga = "Rp 15.000",
   VoidCallback? onTap,
 }) {
@@ -105,22 +106,29 @@ Widget displayProduk({
                   ),
                   const SizedBox(height: 8),
 
-                  // Pickup Schedule Row
+                  // Store Address Row
                   Row(
                     children: [
                       const Icon(
-                        Icons.schedule,
+                        Icons.location_on_outlined,
                         size: 14,
-                        color: AppColors.textGrey,
+                        color: AppColors.secondary,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        "PICKUP: $pickUp",
-                        style: const TextStyle(
-                          color: AppColors.textGrey,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          (alamat != null && alamat.trim().isNotEmpty)
+                              ? alamat
+                              : (pickUp != null && pickUp.trim().isNotEmpty)
+                                  ? pickUp
+                                  : "Alamat toko belum diatur",
+                          style: const TextStyle(
+                            color: AppColors.textGrey,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],

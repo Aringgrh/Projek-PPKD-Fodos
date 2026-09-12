@@ -34,6 +34,8 @@ Widget carouselGambar() {
         return Builder(
           builder: (BuildContext context) {
             return Container(
+              width: double.infinity,
+              height: 165,
               margin: const EdgeInsets.symmetric(horizontal: 4),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
@@ -48,77 +50,73 @@ Widget carouselGambar() {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Positioned.fill(
-                      child: Image.asset(banner["image"]!, fit: BoxFit.cover),
-                    ),
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            colors: [
-                              AppColors.primary.withValues(alpha: 0.88),
-                              AppColors.primary.withValues(alpha: 0.55),
-                              Colors.transparent,
-                            ],
-                          ),
+                    Image.asset(banner["image"]!, fit: BoxFit.cover),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.88),
+                            AppColors.primary.withValues(alpha: 0.55),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              banner["title"]!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                height: 1.2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            banner["title"]!,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                              height: 1.2,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            banner["subtitle"]!,
+                            style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 11,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 10),
+                          GestureDetector(
+                            onTap: launchCarouselUrl,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.secondary,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                banner["button"]!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              banner["subtitle"]!,
-                              style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.9),
-                                fontSize: 11,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: launchCarouselUrl,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.secondary,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  banner["button"]!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -134,7 +132,7 @@ Widget carouselGambar() {
         autoPlayInterval: const Duration(seconds: 4),
         autoPlayAnimationDuration: const Duration(milliseconds: 800),
         viewportFraction: 0.92,
-        enlargeCenterPage: true,
+        enlargeCenterPage: false,
       ),
     ),
   );

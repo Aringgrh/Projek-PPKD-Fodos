@@ -113,7 +113,7 @@ class AuthService {
     required String nomor,
     required String email,
     required String password,
-    required String alamat,
+    String alamat = '',
   }) async {
     try {
       // 1. Buat akun di Firebase Authentication

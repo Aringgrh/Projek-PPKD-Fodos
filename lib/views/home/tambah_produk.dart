@@ -18,6 +18,7 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
   // Controller untuk Produk
   final TextEditingController namaProdukC = TextEditingController();
   final TextEditingController namaTokoC = TextEditingController();
+  final TextEditingController alamatTokoC = TextEditingController();
   final TextEditingController hargaC = TextEditingController();
   final TextEditingController stokC = TextEditingController();
   final TextEditingController kategoriC = TextEditingController();
@@ -29,6 +30,7 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
   void dispose() {
     namaProdukC.dispose();
     namaTokoC.dispose();
+    alamatTokoC.dispose();
     hargaC.dispose();
     stokC.dispose();
     kategoriC.dispose();
@@ -42,6 +44,7 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
 
     final namaProduk = namaProdukC.text.trim();
     final namaToko = namaTokoC.text.trim();
+    final alamatToko = alamatTokoC.text.trim();
     final harga = int.tryParse(hargaC.text.trim()) ?? 0;
     final stok = int.tryParse(stokC.text.trim()) ?? 0;
     final kategori = kategoriC.text.trim();
@@ -56,6 +59,7 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
       await FirebaseFirestore.instance.collection('products').add({
         'namaProduk': namaProduk,
         'namaToko': namaToko,
+        'alamatToko': alamatToko,
         'harga': harga,
         'stok': stok,
         'kategori': kategori,
@@ -168,6 +172,21 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return "Nama Toko Wajib Diisi";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 2b. Alamat Toko
+                  judulTextfield("Alamat Toko"),
+                  const SizedBox(height: 5),
+                  textInputan(
+                    "Masukkan Alamat Lengkap Toko",
+                    kontroller: alamatTokoC,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Alamat Toko Wajib Diisi";
                       }
                       return null;
                     },

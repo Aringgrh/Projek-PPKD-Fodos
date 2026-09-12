@@ -1179,8 +1179,6 @@ class _HalamanPembayaranState extends State<HalamanPembayaran> {
                     : const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.lock_outline, size: 18),
-                          SizedBox(width: 8),
                           Text(
                             'Bayar Sekarang',
                             style: TextStyle(

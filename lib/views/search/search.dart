@@ -34,8 +34,9 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
 
   Future<void> _fetchProducts() async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('products').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('products')
+          .get();
       final products = snapshot.docs
           .map((doc) => ProductModel.fromFirestore(doc))
           .toList();
@@ -61,12 +62,11 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
         _filteredProduk = _allProduk;
       } else {
         _filteredProduk = _allProduk.where((produk) {
-          final namaProdukMatches =
-              produk.namaProduk.toLowerCase().contains(query);
-          final namaTokoMatches =
-              produk.namaToko.toLowerCase().contains(query);
-          final kategoriMatches =
-              produk.kategori.toLowerCase().contains(query);
+          final namaProdukMatches = produk.namaProduk.toLowerCase().contains(
+            query,
+          );
+          final namaTokoMatches = produk.namaToko.toLowerCase().contains(query);
+          final kategoriMatches = produk.kategori.toLowerCase().contains(query);
           return namaProdukMatches || namaTokoMatches || kategoriMatches;
         }).toList();
       }
@@ -107,10 +107,7 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
               const SizedBox(height: 8),
               const Text(
                 "Coba gunakan kata kunci lain atau periksa kembali ejaan produk yang Anda cari.",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textGrey,
-                ),
+                style: TextStyle(fontSize: 14, color: AppColors.textGrey),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -128,10 +125,7 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
         backgroundColor: AppColors.background,
         elevation: 0,
         scrolledUnderElevation: 0,
-        title: const Text(
-          "Cari Makanan",
-          style: AppTextstyle.heading1,
-        ),
+        title: const Text("Cari Makanan", style: AppTextstyle.heading1),
         centerTitle: false,
       ),
       body: SafeArea(
@@ -181,11 +175,7 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
                               size: 20,
                             ),
                           )
-                        : const Icon(
-                            Icons.tune,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
+                        : null,
                     border: InputBorder.none,
                     contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),
@@ -203,32 +193,34 @@ class _HalamanPencarianFodosState extends State<HalamanPencarianFodos> {
                       ),
                     )
                   : _filteredProduk.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: _filteredProduk.length,
-                          itemBuilder: (context, index) {
-                            final produk = _filteredProduk[index];
-                            return displayProduk(
-                              image: produk.gambarUrl,
-                              namaMakanan: produk.namaProduk,
-                              namaToko: produk.namaToko,
-                              sisaPorsi: produk.stok.toString(),
-                              pickUp: "19:00 - 20:30",
-                              harga:
-                                  "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        DetailMakanan(produk: produk),
-                                  ),
-                                ).then((_) => _fetchProducts());
-                              },
-                            );
+                  ? _buildEmptyState()
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      itemCount: _filteredProduk.length,
+                      itemBuilder: (context, index) {
+                        final produk = _filteredProduk[index];
+                        return displayProduk(
+                          image: produk.gambarUrl,
+                          namaMakanan: produk.namaProduk,
+                          namaToko: produk.namaToko,
+                          sisaPorsi: produk.stok.toString(),
+                          alamat: produk.alamatToko.isNotEmpty
+                              ? produk.alamatToko
+                              : 'Alamat toko belum diatur',
+                          harga:
+                              "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    DetailMakanan(produk: produk),
+                              ),
+                            ).then((_) => _fetchProducts());
                           },
-                        ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

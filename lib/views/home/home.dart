@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
@@ -21,7 +22,7 @@ class HomeFodos extends StatefulWidget {
 
 class _HomeFodosState extends State<HomeFodos> {
   int selectedCategoryIndex = 0;
-  String _selectedLocationTitle = 'Jl. Sudirman No. 45';
+  String _selectedLocationTitle = 'Pilih Lokasi Anda';
   String _selectedLocationSubtitle = 'Sekitar kamu';
 
   @override
@@ -30,10 +31,42 @@ class _HomeFodosState extends State<HomeFodos> {
     _loadLocation();
   }
 
-  void _loadLocation() {
+  Future<void> _loadLocation() async {
+    final user = FirebaseAuth.instance.currentUser;
+    String title = PreferenceHandler.getSelectedLocation();
+    String detail = PreferenceHandler.getSelectedLocationDetail();
+
+    if (user != null) {
+      if (title == "Pilih Lokasi Anda" || title == "Jl. Sudirman No. 45") {
+        try {
+          final doc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          if (doc.exists && doc.data() != null) {
+            final data = doc.data()!;
+            final firestoreAlamat = data['alamat'] as String?;
+            final firestoreDetail = data['alamatDetail'] as String?;
+
+            if (firestoreAlamat != null && firestoreAlamat.trim().isNotEmpty) {
+              title = firestoreAlamat.trim();
+              detail = firestoreDetail?.trim().isNotEmpty == true
+                  ? firestoreDetail!.trim()
+                  : 'Sekitar kamu';
+              await PreferenceHandler.setSelectedLocation(
+                title,
+                detail: detail,
+              );
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!mounted) return;
     setState(() {
-      _selectedLocationTitle = PreferenceHandler.getSelectedLocation();
-      _selectedLocationSubtitle = PreferenceHandler.getSelectedLocationDetail();
+      _selectedLocationTitle = title;
+      _selectedLocationSubtitle = detail;
     });
   }
 
@@ -91,7 +124,8 @@ class _HomeFodosState extends State<HomeFodos> {
                               builder: (context) => const HalamanPilihLokasi(),
                             ),
                           );
-                          if (result != null && result is Map<String, dynamic>) {
+                          if (result != null &&
+                              result is Map<String, dynamic>) {
                             setState(() {
                               _selectedLocationTitle =
                                   result['title'] ?? _selectedLocationTitle;
@@ -200,58 +234,6 @@ class _HomeFodosState extends State<HomeFodos> {
                       ],
                     ),
                   ],
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Search Bar Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Container(
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(50),
-                    border: Border.all(
-                      color: AppColors.border.withValues(alpha: 0.5),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.04),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: TextField(
-                    readOnly: true,
-                    onTap: () {
-                      // Navigate to search
-                    },
-                    decoration: InputDecoration(
-                      hintText: "Cari surplus makanan lezat...",
-                      hintStyle: const TextStyle(
-                        color: AppColors.textGrey,
-                        fontSize: 13,
-                      ),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: AppColors.textGrey,
-                        size: 20,
-                      ),
-                      suffixIcon: IconButton(
-                        onPressed: () {},
-                        icon: const Icon(
-                          Icons.tune,
-                          color: AppColors.primary,
-                          size: 20,
-                        ),
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
                 ),
               ),
 
@@ -385,7 +367,9 @@ class _HomeFodosState extends State<HomeFodos> {
                         namaMakanan: produk.namaProduk,
                         namaToko: produk.namaToko,
                         sisaPorsi: produk.stok.toString(),
-                        pickUp: "19:00 - 20:30",
+                        alamat: produk.alamatToko.isNotEmpty
+                            ? produk.alamatToko
+                            : 'Alamat toko belum diatur',
                         harga:
                             "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
                         onTap: () {
