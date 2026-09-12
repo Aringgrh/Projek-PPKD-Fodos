@@ -30,7 +30,6 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
   final TextEditingController emailC = TextEditingController();
   final TextEditingController passC = TextEditingController();
   final TextEditingController konfirmC = TextEditingController();
-  final TextEditingController alamatC = TextEditingController();
 
   @override
   void dispose() {
@@ -39,7 +38,6 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
     emailC.dispose();
     passC.dispose();
     konfirmC.dispose();
-    alamatC.dispose();
     super.dispose();
   }
 
@@ -201,7 +199,6 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
     final nomor = nomorC.text.trim();
     final email = emailC.text.trim();
     final pass = passC.text;
-    final alamat = alamatC.text.trim();
 
     setState(() {
       isLoading = true;
@@ -213,7 +210,6 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
         nomor: nomor,
         email: email,
         password: pass,
-        alamat: alamat,
       );
 
       if (!mounted) return;
@@ -415,25 +411,7 @@ class _HalamanPendaftaranFodosState extends State<HalamanPendaftaranFodos> {
                   ),
                   const SizedBox(height: 18),
 
-                  // 4. Alamat Lengkap
-                  _buildFieldLabel("Alamat Lengkap"),
-                  TextFormField(
-                    controller: alamatC,
-                    keyboardType: TextInputType.streetAddress,
-                    decoration: _inputDecoration(
-                      hintText: "Masukkan Alamat Tempat Tinggal / Pengiriman",
-                      prefixIcon: Icons.location_on_outlined,
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return "Alamat wajib diisi!";
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 18),
-
-                  // 5. Password
+                  // 4. Password
                   _buildFieldLabel("Kata Sandi"),
                   TextFormField(
                     controller: passC,

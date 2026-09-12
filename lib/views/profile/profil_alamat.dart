@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/address_model.dart';
+import 'package:fodos/service/address_service.dart';
 import 'package:fodos/service/preferencehandler.dart';
 
 class ProfilAlamat extends StatefulWidget {
@@ -13,6 +14,7 @@ class ProfilAlamat extends StatefulWidget {
 class _ProfilAlamatState extends State<ProfilAlamat> {
   List<AddressModel> _addresses = [];
   String _selectedAddressTitle = '';
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -20,10 +22,18 @@ class _ProfilAlamatState extends State<ProfilAlamat> {
     _loadAddresses();
   }
 
-  void _loadAddresses() {
+  Future<void> _loadAddresses() async {
     setState(() {
-      _addresses = PreferenceHandler.getSavedAddresses();
+      _isLoading = true;
+    });
+
+    final addresses = await AddressService.getUserAddresses();
+    if (!mounted) return;
+
+    setState(() {
+      _addresses = addresses;
       _selectedAddressTitle = PreferenceHandler.getSelectedLocation();
+      _isLoading = false;
     });
   }
 
@@ -43,16 +53,7 @@ class _ProfilAlamatState extends State<ProfilAlamat> {
   }
 
   void _setDefaultAddress(AddressModel item) async {
-    final updatedList = _addresses.map((a) {
-      return a.copyWith(isDefault: a.id == item.id);
-    }).toList();
-
-    await PreferenceHandler.saveAddresses(updatedList);
-    await PreferenceHandler.setSelectedLocation(
-      item.address,
-      detail: item.detail.isNotEmpty ? item.detail : item.label,
-    );
-
+    await AddressService.setDefaultAddress(item, _addresses);
     _loadAddresses();
 
     if (!mounted) return;
@@ -67,7 +68,7 @@ class _ProfilAlamatState extends State<ProfilAlamat> {
   }
 
   void _deleteAddress(String id) async {
-    await PreferenceHandler.deleteSavedAddress(id);
+    await AddressService.deleteAddress(id);
     _loadAddresses();
 
     if (!mounted) return;
@@ -296,9 +297,9 @@ class _ProfilAlamatState extends State<ProfilAlamat> {
                             );
 
                             if (editItem == null) {
-                              await PreferenceHandler.addSavedAddress(newAddr);
+                              await AddressService.addAddress(newAddr);
                             } else {
-                              await PreferenceHandler.updateSavedAddress(newAddr);
+                              await AddressService.updateAddress(newAddr);
                             }
 
                             if (!ctx.mounted) return;
@@ -361,36 +362,40 @@ class _ProfilAlamatState extends State<ProfilAlamat> {
         ),
         centerTitle: false,
       ),
-      body: _addresses.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.location_off_outlined,
-                    size: 64,
-                    color: AppColors.textGrey.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Belum ada alamat tersimpan",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Tambahkan alamat untuk mempermudah pemesanan.",
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textGrey,
-                    ),
-                  ),
-                ],
-              ),
+      body: _isLoading && _addresses.isEmpty
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.secondary),
             )
+          : _addresses.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.location_off_outlined,
+                        size: 64,
+                        color: AppColors.textGrey.withValues(alpha: 0.5),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Belum ada alamat tersimpan",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        "Tambahkan alamat untuk mempermudah pemesanan.",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textGrey,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _addresses.length,

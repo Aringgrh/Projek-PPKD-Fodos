@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fodos/models/address_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -56,17 +58,43 @@ class PreferenceHandler {
 
   // --- Location Management ---
 
-  static String getSelectedLocation() {
+  static String _getUserLocationKey([String? uid]) {
+    final currentUid = uid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid != null && currentUid.isNotEmpty) {
+      return "${_keySelectedLocation}_$currentUid";
+    }
+    return _keySelectedLocation;
+  }
+
+  static String _getUserLocationDetailKey([String? uid]) {
+    final currentUid = uid ?? FirebaseAuth.instance.currentUser?.uid;
+    if (currentUid != null && currentUid.isNotEmpty) {
+      return "${_keySelectedLocationDetail}_$currentUid";
+    }
+    return _keySelectedLocationDetail;
+  }
+
+  static String getSelectedLocation([String? uid]) {
     try {
-      return _prefs.getString(_keySelectedLocation) ?? "Jl. Sudirman No. 45";
+      final key = _getUserLocationKey(uid);
+      final val = _prefs.getString(key);
+      if (val != null && val.isNotEmpty) {
+        return val;
+      }
+      return "Pilih Lokasi Anda";
     } catch (_) {
-      return "Jl. Sudirman No. 45";
+      return "Pilih Lokasi Anda";
     }
   }
 
-  static String getSelectedLocationDetail() {
+  static String getSelectedLocationDetail([String? uid]) {
     try {
-      return _prefs.getString(_keySelectedLocationDetail) ?? "Sekitar kamu";
+      final key = _getUserLocationDetailKey(uid);
+      final val = _prefs.getString(key);
+      if (val != null && val.isNotEmpty) {
+        return val;
+      }
+      return "Sekitar kamu";
     } catch (_) {
       return "Sekitar kamu";
     }
@@ -75,67 +103,50 @@ class PreferenceHandler {
   static Future<void> setSelectedLocation(
     String title, {
     String detail = "Sekitar kamu",
+    String? uid,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_keySelectedLocation, title);
-    await prefs.setString(_keySelectedLocationDetail, detail);
+    final currentUid = uid ?? FirebaseAuth.instance.currentUser?.uid;
+
+    if (currentUid != null && currentUid.isNotEmpty) {
+      await prefs.setString("${_keySelectedLocation}_$currentUid", title);
+      await prefs.setString("${_keySelectedLocationDetail}_$currentUid", detail);
+
+      try {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUid)
+            .update({
+          'alamat': title,
+          'alamatDetail': detail,
+        });
+      } catch (_) {}
+    } else {
+      await prefs.setString(_keySelectedLocation, title);
+      await prefs.setString(_keySelectedLocationDetail, detail);
+    }
   }
 
   // --- Saved Addresses ---
-
-  static List<AddressModel> _getDefaultAddresses() {
-    return [
-      AddressModel(
-        id: 'default-1',
-        label: 'Rumah',
-        address: 'Jl. Sudirman No. 45',
-        detail: 'Kebayoran Baru, Jakarta Pusat (Dekat Gerbang Utama)',
-        receiverName: 'Budi Santoso',
-        receiverPhone: '081234567890',
-        isDefault: true,
-      ),
-      AddressModel(
-        id: 'default-2',
-        label: 'Kantor',
-        address: 'SCBD Lot 8, Gedung Energy Lt. 15',
-        detail: 'Jl. Jend. Sudirman Kav. 52-53, Jakarta Selatan',
-        receiverName: 'Budi Santoso',
-        receiverPhone: '081234567890',
-        isDefault: false,
-      ),
-      AddressModel(
-        id: 'default-3',
-        label: 'Apartemen',
-        address: 'Green Pramuka City Tower Chrysant',
-        detail: 'Lantai 12 Unit 08A, Cempaka Putih, Jakarta Pusat',
-        receiverName: 'Budi Santoso',
-        receiverPhone: '081234567890',
-        isDefault: false,
-      ),
-      AddressModel(
-        id: 'default-4',
-        label: 'Kos',
-        address: 'Jl. Kemang Raya No. 14',
-        detail: 'Mampang Prapatan, Jakarta Selatan (Pagar Hitam)',
-        receiverName: 'Budi Santoso',
-        receiverPhone: '081234567890',
-        isDefault: false,
-      ),
-    ];
-  }
 
   static List<AddressModel> getSavedAddresses() {
     try {
       final raw = _prefs.getString(_keySavedAddresses);
       if (raw == null || raw.isEmpty) {
-        return _getDefaultAddresses();
+        return [];
       }
       final decoded = jsonDecode(raw) as List<dynamic>;
-      return decoded
+      final list = decoded
           .map((item) => AddressModel.fromJson(item as Map<String, dynamic>))
+          .where((item) => !item.id.startsWith('default-'))
           .toList();
+
+      if (raw.contains('default-')) {
+        saveAddresses(list);
+      }
+      return list;
     } catch (_) {
-      return _getDefaultAddresses();
+      return [];
     }
   }
 
@@ -168,6 +179,14 @@ class PreferenceHandler {
 
   static Future<void> logOut() async {
     final prefs = await SharedPreferences.getInstance();
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null && uid.isNotEmpty) {
+      await prefs.remove("${_keySelectedLocation}_$uid");
+      await prefs.remove("${_keySelectedLocationDetail}_$uid");
+    }
+    await prefs.remove(_keySelectedLocation);
+    await prefs.remove(_keySelectedLocationDetail);
+    await prefs.remove(_keySavedAddresses);
     await prefs.remove(_keyIsLogin);
     await prefs.remove(_keyUserEmail);
     await prefs.remove(_keyUserProfileImage);
