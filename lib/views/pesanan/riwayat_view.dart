@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/widgets/app_image_loader.dart';
@@ -31,6 +33,244 @@ class RiwayatView extends StatelessWidget {
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
+    );
+  }
+
+  Future<void> _tampilkanDialogUlasan(
+    BuildContext context,
+    OrderModel order,
+  ) async {
+    double selectedRating = 5.0;
+    final TextEditingController ulasanController = TextEditingController();
+    bool isSubmitting = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (dialogCtx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Column(
+                children: [
+                  const Icon(
+                    Icons.stars_rounded,
+                    color: Colors.amber,
+                    size: 48,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Beri Penilaian & Ulasan',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textDark,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Bagaimana pengalaman penyelamatan makanan Anda?',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textGrey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 8),
+                    // Star Rating Picker
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(5, (index) {
+                        final starValue = index + 1;
+                        return IconButton(
+                          iconSize: 32,
+                          icon: Icon(
+                            starValue <= selectedRating
+                                ? Icons.star_rounded
+                                : Icons.star_outline_rounded,
+                            color: Colors.amber,
+                          ),
+                          onPressed: () {
+                            setDialogState(() {
+                              selectedRating = starValue.toDouble();
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                    Text(
+                      '${selectedRating.toInt()} dari 5 Bintang',
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Review input field
+                    TextField(
+                      controller: ulasanController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText:
+                            'Tulis ulasan Anda (misal: makanan masih lezat, porsi mantap, dsb)...',
+                        hintStyle: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textGrey,
+                        ),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () => Navigator.pop(dialogCtx),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: AppColors.textGrey),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          setDialogState(() {
+                            isSubmitting = true;
+                          });
+
+                          try {
+                            // Get current user display name
+                            final userDoc = await FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(order.userId)
+                                .get();
+                            String userName = order.userName;
+                            if (userName.isEmpty && userDoc.exists) {
+                              userName = userDoc.data()?['name'] ?? '';
+                            }
+                            if (userName.isEmpty) {
+                              userName =
+                                  FirebaseAuth
+                                      .instance
+                                      .currentUser
+                                      ?.displayName ??
+                                  'Pengguna Fodos';
+                            }
+
+                            // Write reviews for each item product in the order
+                            final batch = FirebaseFirestore.instance.batch();
+                            final reviewsRef = FirebaseFirestore.instance
+                                .collection('reviews');
+
+                            for (final item in order.items) {
+                              final prodId = item.productId.isNotEmpty
+                                  ? item.productId
+                                  : '';
+                              if (prodId.isNotEmpty) {
+                                final newDoc = reviewsRef.doc();
+                                final review = ReviewModel(
+                                  id: newDoc.id,
+                                  orderId: order.id,
+                                  productId: prodId,
+                                  userId: order.userId,
+                                  userName: userName,
+                                  rating: selectedRating,
+                                  ulasan: ulasanController.text.trim(),
+                                  createdAt: DateTime.now(),
+                                );
+                                batch.set(newDoc, review.toFirestore());
+                              }
+                            }
+
+                            // Update order status: isReviewed = true
+                            final orderDoc = FirebaseFirestore.instance
+                                .collection('orders')
+                                .doc(order.id);
+                            batch.update(orderDoc, {
+                              'isReviewed': true,
+                              'rating': selectedRating,
+                            });
+
+                            await batch.commit();
+
+                            if (context.mounted) {
+                              Navigator.pop(dialogCtx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Terima kasih! Ulasan Anda berhasil dikirim.',
+                                  ),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                            });
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Gagal mengirim ulasan: $e'),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.amber[700],
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Kirim Ulasan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -210,6 +450,113 @@ class RiwayatView extends StatelessWidget {
                         ),
                       ],
                     ),
+
+                    // Review Action Row for Completed Orders
+                    if (isSelesai) ...[
+                      const Divider(height: 18, color: AppColors.border),
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('reviews')
+                            .where('orderId', isEqualTo: order.id)
+                            .snapshots(),
+                        builder: (context, reviewSnapshot) {
+                          final hasReviewDoc =
+                              reviewSnapshot.hasData &&
+                              reviewSnapshot.data!.docs.isNotEmpty;
+
+                          if (hasReviewDoc) {
+                            final reviewData =
+                                reviewSnapshot.data!.docs.first.data()
+                                    as Map<String, dynamic>?;
+                            final ratingVal =
+                                (reviewData?['rating'] as num?)?.toDouble() ??
+                                5.0;
+
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.check_circle,
+                                      color: Colors.green,
+                                      size: 16,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Sudah Diulas',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.star_rounded,
+                                        color: Colors.amber,
+                                        size: 14,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        ratingVal.toStringAsFixed(1),
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.amber,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+
+                          return SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  _tampilkanDialogUlasan(context, order),
+                              icon: const Icon(
+                                Icons.star_rate_rounded,
+                                size: 18,
+                              ),
+                              label: const Text(
+                                'Beri Ulasan',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.amber[700],
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 10,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ],
                 ),
               ),

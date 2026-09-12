@@ -5,3 +5,5 @@ export 'cart_model.dart';
 export 'order_model.dart';
 export 'firestrore_datetime.dart';
 export 'address_model.dart';
+export 'review_model.dart';
+

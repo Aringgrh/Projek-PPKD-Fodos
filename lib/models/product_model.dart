@@ -19,6 +19,10 @@ class ProductModelFirebase {
   @JsonKey(defaultValue: '')
   final String namaToko;
 
+  /// Alamat lokasi toko/warung penjual.
+  @JsonKey(defaultValue: '')
+  final String alamatToko;
+
   /// Kategori produk (contoh: "Makanan Berat", "Roti", "Minuman", dll).
   @JsonKey(defaultValue: '')
   final String kategori;
@@ -47,6 +51,7 @@ class ProductModelFirebase {
     this.id = '',
     required this.namaProduk,
     required this.namaToko,
+    this.alamatToko = '',
     required this.kategori,
     required this.gambarUrl,
     required this.harga,
@@ -66,6 +71,7 @@ class ProductModelFirebase {
     String? id,
     String? namaProduk,
     String? namaToko,
+    String? alamatToko,
     String? kategori,
     String? gambarUrl,
     double? harga,
@@ -77,6 +83,7 @@ class ProductModelFirebase {
       id: id ?? this.id,
       namaProduk: namaProduk ?? this.namaProduk,
       namaToko: namaToko ?? this.namaToko,
+      alamatToko: alamatToko ?? this.alamatToko,
       kategori: kategori ?? this.kategori,
       gambarUrl: gambarUrl ?? this.gambarUrl,
       harga: harga ?? this.harga,
@@ -122,6 +129,19 @@ class ProductModelFirebase {
           map['nama_toko'] ?? map['toko'] ?? map['store'] ?? map['shop'];
       if (fallbackToko != null) {
         map['namaToko'] = fallbackToko.toString().trim();
+      }
+    }
+
+    // Normalisasi Alamat Toko langsung dari Firebase Firestore
+    final currentAlamat = (map['alamatToko'] ?? '').toString().trim();
+    if (currentAlamat.isEmpty) {
+      final fallbackAlamat = map['alamat_toko'] ??
+          map['alamat'] ??
+          map['address'] ??
+          map['lokasiToko'] ??
+          map['lokasi'];
+      if (fallbackAlamat != null) {
+        map['alamatToko'] = fallbackAlamat.toString().trim();
       }
     }
 

@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
@@ -21,6 +22,41 @@ class _DetailMakananState extends State<DetailMakanan> {
   int quantity = 1;
   bool isFavorite = false;
   String userId = '';
+  bool showAllReviews = false;
+
+
+  Future<void> _bukaRuteNavigasi() async {
+    final String storeAddress = widget.produk.alamatToko.isNotEmpty
+        ? widget.produk.alamatToko
+        : '${widget.produk.namaToko}, Jakarta, Indonesia';
+
+    final String destination = Uri.encodeComponent(storeAddress);
+    final Uri googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$destination',
+    );
+
+    try {
+      if (await canLaunchUrl(googleMapsUrl)) {
+        await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tidak dapat membuka aplikasi Peta / Google Maps.'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal membuka rute navigasi: $e'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -350,186 +386,389 @@ class _DetailMakananState extends State<DetailMakanan> {
                         ),
                       ),
 
+                      // Store Address & Direction Card Section
                       const SizedBox(height: 24),
                       const Divider(height: 1, thickness: 1),
                       const SizedBox(height: 20),
 
-                      // Rating & Reviews Section
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Expanded(
-                            child: Text(
-                              'Rating & Ulasan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Row(
-                            children: const [
-                              Icon(Icons.star, color: Colors.amber, size: 18),
-                              SizedBox(width: 4),
-                              Text(
-                                '4.8',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              Text(
-                                '(124 ulasan)',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textGrey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+                      const Text(
+                        'Lokasi & Alamat Toko',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
                       ),
                       const SizedBox(height: 12),
-
-                      // Customer reviews list
                       Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.5),
+                            color: AppColors.border.withValues(alpha: 0.6),
                           ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
-                                Text(
-                                  'Ahmad Subarjo',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Makanannya masih sangat fresh! Rasanya enak banget dan porsinya masih bagus sekali. Worth it!',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textGrey,
-                              ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
                             ),
                           ],
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: const [
-                                Text(
-                                  'Siti Rahma',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.storefront_rounded,
+                                    color: AppColors.primary,
+                                    size: 24,
                                   ),
                                 ),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                      size: 12,
-                                    ),
-                                    Icon(
-                                      Icons.star,
-                                      color: Colors.grey,
-                                      size: 12,
-                                    ),
-                                  ],
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        widget.produk.namaToko,
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Icon(
+                                            Icons.location_on_outlined,
+                                            size: 16,
+                                            color: AppColors.secondary,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              widget.produk.alamatToko.isNotEmpty
+                                                  ? widget.produk.alamatToko
+                                                  : 'Alamat toko belum diatur',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                color: AppColors.textGrey,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'Penyelamatan yang sangat berharga! Hemat banget harganya untuk kualitas donat/makanan seperti ini.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textGrey,
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _bukaRuteNavigasi,
+                                icon: const Icon(Icons.directions_rounded, size: 18),
+                                label: const Text(
+                                  'Petunjuk Arah / Rute Navigasi',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      // Spacing for Bottom Bar
-                      const SizedBox(height: 100),
+                      const SizedBox(height: 24),
+                      const Divider(height: 1, thickness: 1),
+                      const SizedBox(height: 20),
+
+                      // Rating & Reviews Section (Dynamic from Firestore reviews collection)
+                      StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('reviews')
+                            .where('productId', isEqualTo: widget.produk.id)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          List<ReviewModel> reviews = [];
+                          if (snapshot.hasData) {
+                            reviews = snapshot.data!.docs
+                                .map((doc) => ReviewModel.fromFirestore(
+                                      doc as DocumentSnapshot<Map<String, dynamic>>,
+                                    ))
+                                .toList()
+                              ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                          }
+
+                          final double avgRating = reviews.isNotEmpty
+                              ? (reviews.map((r) => r.rating).reduce((a, b) => a + b) /
+                                  reviews.length)
+                              : 0.0;
+                          final String avgRatingStr = reviews.isNotEmpty
+                              ? avgRating.toStringAsFixed(1)
+                              : 'Belum ada';
+                          final String countStr = '(${reviews.length} ulasan)';
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      'Rating & Ulasan',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textDark,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.star,
+                                        color: Colors.amber,
+                                        size: 18,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        avgRatingStr,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        countStr,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textGrey,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+
+                              // Customer reviews list
+                              if (reviews.isEmpty)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 20,
+                                    horizontal: 16,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.border.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: const [
+                                      Icon(
+                                        Icons.rate_review_outlined,
+                                        size: 36,
+                                        color: AppColors.textGrey,
+                                      ),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Belum ada ulasan untuk produk ini',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                      SizedBox(height: 4),
+                                      Text(
+                                        'Beli & selesaikan pesanan produk ini untuk memberikan ulasan pertama!',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textGrey,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else ...[
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: showAllReviews
+                                      ? reviews.length
+                                      : reviews.take(3).length,
+                                  separatorBuilder: (context, index) =>
+                                      const SizedBox(height: 10),
+                                  itemBuilder: (context, index) {
+                                    final review = reviews[index];
+                                    return Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(
+                                          color: AppColors.border.withValues(
+                                            alpha: 0.5,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  review.userName.isNotEmpty
+                                                      ? review.userName
+                                                      : 'Pengguna Fodos',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                    color: AppColors.textDark,
+                                                  ),
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              Row(
+                                                children: List.generate(5, (
+                                                  starIdx,
+                                                ) {
+                                                  return Icon(
+                                                    starIdx <
+                                                            review.rating.round()
+                                                        ? Icons.star_rounded
+                                                        : Icons
+                                                            .star_outline_rounded,
+                                                    color: starIdx <
+                                                            review.rating.round()
+                                                        ? Colors.amber
+                                                        : Colors.grey[300],
+                                                    size: 14,
+                                                  );
+                                                }),
+                                              ),
+                                            ],
+                                          ),
+                                          if (review.ulasan.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Text(
+                                              review.ulasan,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: AppColors.textGrey,
+                                                height: 1.4,
+                                              ),
+                                            ),
+                                          ],
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            review.createdAt
+                                                .toLocal()
+                                                .toString()
+                                                .substring(0, 10),
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: Colors.grey[500],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                                if (reviews.length > 3) ...[
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: TextButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          showAllReviews = !showAllReviews;
+                                        });
+                                      },
+                                      icon: Icon(
+                                        showAllReviews
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
+                                        color: AppColors.primary,
+                                        size: 20,
+                                      ),
+                                      label: Text(
+                                        showAllReviews
+                                            ? 'Tampilkan Lebih Sedikit'
+                                            : 'Lihat Semua Ulasan (${reviews.length})',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
+                                      style: TextButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 10,
+                                        ),
+                                        backgroundColor: AppColors.primary
+                                            .withValues(alpha: 0.08),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+
+                            ],
+                          );
+                        },
+                      ),
+
+
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -595,168 +834,161 @@ class _DetailMakananState extends State<DetailMakanan> {
               ],
             ),
           ),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20.0,
+          vertical: 16.0,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Row 1: Quantity Control & Total Price Display
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Quantity Control
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: AppColors.border),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: () {
+                            if (quantity > 1) {
+                              setState(() {
+                                quantity--;
+                              });
+                            }
+                          },
+                          icon: const Icon(Icons.remove, size: 16),
+                          color: AppColors.primary,
+                        ),
+                        Text(
+                          '$quantity',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            if (quantity < widget.produk.stok) {
+                              setState(() {
+                                quantity++;
+                              });
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Stok porsi terbatas!'),
+                                  duration: Duration(seconds: 1),
+                                ),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.add, size: 16),
+                          color: AppColors.primary,
+                        ),
+                      ],
+                    ),
+                  ),
 
-          // Sticky Bottom Action Bar (Quantity & Purchase)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20.0,
-                vertical: 16.0,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 16,
-                    offset: const Offset(0, -4),
+                  // Total Price display
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Total: Rp ${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.secondary,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Row 1: Quantity Control & Total Price Display
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Quantity Control
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(50),
-                          ),
-                          child: Row(
-                            children: [
-                              IconButton(
-                                onPressed: () {
-                                  if (quantity > 1) {
-                                    setState(() {
-                                      quantity--;
-                                    });
-                                  }
-                                },
-                                icon: const Icon(Icons.remove, size: 16),
-                                color: AppColors.primary,
-                              ),
-                              Text(
-                                '$quantity',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
-                                ),
-                              ),
-                              IconButton(
-                                onPressed: () {
-                                  if (quantity < widget.produk.stok) {
-                                    setState(() {
-                                      quantity++;
-                                    });
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Stok porsi terbatas!'),
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-                                  }
-                                },
-                                icon: const Icon(Icons.add, size: 16),
-                                color: AppColors.primary,
-                              ),
-                            ],
-                          ),
-                        ),
+              const SizedBox(height: 12),
 
-                        // Total Price display
-                        Expanded(
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'Total: Rp ${totalPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.secondary,
-                                ),
-                              ),
-                            ),
-                          ),
+              // Row 2: Action Buttons
+              Row(
+                children: [
+                  // "Tambah ke Keranjang" Button
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _addToCart,
+                      icon: const Icon(
+                        Icons.shopping_cart_outlined,
+                        size: 18,
+                      ),
+                      label: const Text(
+                        'Ke Keranjang',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
-                      ],
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.secondary,
+                        side: const BorderSide(
+                          color: AppColors.secondary,
+                          width: 1.5,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                  ),
+                  const SizedBox(width: 12),
 
-                    // Row 2: Action Buttons
-                    Row(
-                      children: [
-                        // "Tambah ke Keranjang" Button
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _addToCart,
-                            icon: const Icon(
-                              Icons.shopping_cart_outlined,
-                              size: 18,
-                            ),
-                            label: const Text(
-                              'Ke Keranjang',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppColors.secondary,
-                              side: const BorderSide(
-                                color: AppColors.secondary,
-                                width: 1.5,
-                              ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                          ),
+                  // "Pesan Sekarang" Button
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: _pesanSekarang,
+                      label: const Text(
+                        'Pesan Sekarang',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
                         ),
-                        const SizedBox(width: 12),
-
-                        // "Pesan Sekarang" Button
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _pesanSekarang,
-                            label: const Text(
-                              'Pesan Sekarang',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.secondary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(50),
-                              ),
-                            ),
-                          ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.secondary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(50),
                         ),
-                      ],
+                      ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
