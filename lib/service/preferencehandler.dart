@@ -16,10 +16,24 @@ class PreferenceHandler {
   static const _keySelectedLocation = "selectedLocation";
   static const _keySelectedLocationDetail = "selectedLocationDetail";
   static const _keySavedAddresses = "savedAddresses";
+  static const _keyIsSellerMode = "isSellerMode";
 
   static Future<void> setLogin(bool isLogin) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyIsLogin, isLogin);
+  }
+
+  static Future<void> setSellerMode(bool isSeller) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyIsSellerMode, isSeller);
+  }
+
+  static bool get isSellerMode {
+    try {
+      return _prefs.getBool(_keyIsSellerMode) ?? false;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<void> setUserEmail(String email) async {

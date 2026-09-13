@@ -72,7 +72,8 @@ class _RegisterStorePageState extends State<RegisterStorePage> {
         );
 
         // Arahkan langsung ke Seller Dashboard
-        context.pushReplacement(const SellerDashboardPage());
+        await PreferenceHandler.setSellerMode(true);
+        if (context.mounted) context.pushReplacement(const SellerDashboardPage());
       }
     } catch (e) {
       if (mounted) {

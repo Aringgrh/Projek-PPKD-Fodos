@@ -5,6 +5,7 @@ import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/views/home/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_login.dart';
+import 'package:fodos/views/seller/seller_dashboard_page.dart';
 import 'package:lottie/lottie.dart';
 
 class SplashScreenTugas12 extends StatefulWidget {
@@ -25,7 +26,11 @@ class _SplashScreenTugas12State extends State<SplashScreenTugas12> {
     await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
     if (PreferenceHandler.isLogin == true) {
-      context.pushAndRemoveAll(const BottomNavTugas12());
+      if (PreferenceHandler.isSellerMode) {
+        context.pushAndRemoveAll(const SellerDashboardPage());
+      } else {
+        context.pushAndRemoveAll(const BottomNavTugas12());
+      }
     } else {
       context.pushAndRemoveAll(const HalamanLoginFodos());
     }

@@ -5,6 +5,7 @@ import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/service/auth_service.dart';
+import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/service/seller_service.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/profile/informasi_pribadi.dart';
@@ -194,6 +195,7 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                     _hasStore
                         ? menuProfil(
                             onPressed: () async {
+                              await PreferenceHandler.setSellerMode(true);
                               await context.push(const SellerDashboardPage());
                               _loadUserData();
                             },
