@@ -7,6 +7,7 @@ Widget buildInputField({
   required String hintText,
   TextInputType keyboardType = TextInputType.text,
   Function(String)? onChanged,
+  bool readOnly = false,
 }) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -23,6 +24,7 @@ Widget buildInputField({
       const SizedBox(height: 6),
       Container(
         decoration: BoxDecoration(
+          color: readOnly ? Colors.grey[200] : Colors.white,
           border: Border.all(color: Colors.grey[300]!),
           borderRadius: BorderRadius.circular(10),
         ),
@@ -36,10 +38,11 @@ Widget buildInputField({
                 controller: controller,
                 keyboardType: keyboardType,
                 onChanged: onChanged,
-                style: const TextStyle(
+                readOnly: readOnly,
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: Color(0xFF191C1D),
+                  color: readOnly ? Colors.grey[600] : const Color(0xFF191C1D),
                 ),
                 decoration: InputDecoration(
                   hintText: hintText,

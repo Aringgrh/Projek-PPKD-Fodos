@@ -54,9 +54,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
         if (doc.exists && doc.data() != null) {
           currentUser = UserModelFirebase.fromJson(doc.data()!);
           namaC.text = currentUser!.name;
-          emailC.text = currentUser!.email.isNotEmpty
-              ? currentUser!.email
-              : (user.email ?? '');
+          emailC.text = user.email ?? currentUser!.email;
           nomorC.text = currentUser!.nomor;
           domisiliC.text = currentUser!.alamat;
         } else {
@@ -108,8 +106,47 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
         await PreferenceHandler.setUserEmail(newEmail);
         currentUser = updatedUser;
       }
+    } on FirebaseAuthException catch (e) {
+      debugPrint("FirebaseAuthException: ${e.code}");
+      if (mounted) {
+        String errorMessage = 'Gagal menyimpan perubahan.';
+        if (e.code == 'requires-recent-login') {
+          errorMessage = 'Sesi Anda terlalu lama. Silakan logout dan login kembali untuk mengubah email.';
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = 'Email ini sudah digunakan oleh akun lain.';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Format email tidak valid.';
+        } else {
+          errorMessage = 'Error: ${e.message}';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        setState(() {
+          isSaving = false;
+        });
+      }
+      return;
     } catch (e) {
       debugPrint("Error saving user data: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Terjadi kesalahan: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+      setState(() {
+        isSaving = false;
+      });
+      return;
     }
 
     if (mounted) {
@@ -243,6 +280,7 @@ class _InformasiPribadiState extends State<InformasiPribadi> {
                           controller: emailC,
                           hintText: "Masukkan email",
                           keyboardType: TextInputType.emailAddress,
+                          readOnly: true,
                         ),
                         const SizedBox(height: 18),
 

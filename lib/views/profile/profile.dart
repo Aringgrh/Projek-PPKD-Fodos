@@ -5,11 +5,14 @@ import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/models.dart';
 import 'package:fodos/service/auth_service.dart';
+import 'package:fodos/service/seller_service.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/profile/informasi_pribadi.dart';
 import 'package:fodos/views/profile/profil_alamat.dart';
 import 'package:fodos/views/profile/profil_keamanan.dart';
 import 'package:fodos/views/profile/profil_tentang_aplikasi.dart';
+import 'package:fodos/views/seller/register_store_page.dart';
+import 'package:fodos/views/seller/seller_dashboard_page.dart';
 import 'package:fodos/widgets/widget_profile.dart';
 
 class ProfileTugas12 extends StatefulWidget {
@@ -21,6 +24,8 @@ class ProfileTugas12 extends StatefulWidget {
 
 class _ProfileTugas12State extends State<ProfileTugas12> {
   String _userName = 'Pengguna Fodos';
+  bool _hasStore = false;
+  StoreModel? _userStore;
 
   @override
   void initState() {
@@ -48,6 +53,16 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
             });
           }
         }
+      }
+
+      // Load store data for seller mode
+      final hasStore = await SellerService.hasStore();
+      final store = await SellerService.getStore();
+      if (mounted) {
+        setState(() {
+          _hasStore = hasStore;
+          _userStore = store;
+        });
       }
     } catch (e) {
       debugPrint("Error loading user data in profile: $e");
@@ -175,6 +190,77 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                 borderRadius: BorderRadius.circular(16),
                 child: Column(
                   children: [
+                    // Toko / Mode Penjual Entry Point
+                    _hasStore
+                        ? menuProfil(
+                            onPressed: () async {
+                              await context.push(const SellerDashboardPage());
+                              _loadUserData();
+                            },
+                            leading: const Icon(
+                              Icons.storefront_rounded,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            title: "Toko Saya",
+                            subtitle: _userStore != null
+                                ? "Dashboard Penjual (${_userStore!.namaToko})"
+                                : "Beralih ke Dashboard Penjual",
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                "POV Penjual",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ),
+                          )
+                        : menuProfil(
+                            onPressed: () async {
+                              await context.push(const RegisterStorePage());
+                              _loadUserData();
+                            },
+                            leading: const Icon(
+                              Icons.storefront_outlined,
+                              color: AppColors.primary,
+                              size: 22,
+                            ),
+                            title: "Mulai Berjualan",
+                            subtitle: "Buka tokomu & jangkau pembeli Fodos",
+                            trailing: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Text(
+                                "Buka Toko",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.orange,
+                                ),
+                              ),
+                            ),
+                          ),
+                    const Divider(
+                      height: 1,
+                      thickness: 1,
+                      color: AppColors.border,
+                    ),
                     menuProfil(
                       onPressed: () async {
                         await context.push(const InformasiPribadi());
