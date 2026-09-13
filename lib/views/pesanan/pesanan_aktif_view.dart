@@ -54,32 +54,6 @@ class _PesananAktifViewState extends State<PesananAktifView> {
 
     if (confirm == true) {
       try {
-        // Kurangi stok / porsi produk di database saat pesanan diselesaikan
-        for (final item in order.items) {
-          if (item.productId.isNotEmpty && item.jumlah > 0) {
-            try {
-              final prodDoc = FirebaseFirestore.instance
-                  .collection('products')
-                  .doc(item.productId);
-              await FirebaseFirestore.instance.runTransaction((
-                transaction,
-              ) async {
-                final snapshot = await transaction.get(prodDoc);
-                if (snapshot.exists) {
-                  final currentStok =
-                      (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
-                  final newStok = (currentStok - item.jumlah)
-                      .clamp(0, 999999)
-                      .toInt();
-                  transaction.update(prodDoc, {'stok': newStok});
-                }
-              });
-            } catch (err) {
-              debugPrint('Gagal update stok produk ${item.productId}: $err');
-            }
-          }
-        }
-
         await FirebaseFirestore.instance
             .collection('orders')
             .doc(order.id)
@@ -105,7 +79,7 @@ class _PesananAktifViewState extends State<PesananAktifView> {
     }
   }
 
-  Future<void> _batalkan(String pesananId, String orderSummary) async {
+  Future<void> _batalkan(OrderModel order, String orderSummary) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -132,9 +106,35 @@ class _PesananAktifViewState extends State<PesananAktifView> {
 
     if (confirm == true) {
       try {
+        // Kembalikan stok / porsi produk di database saat pesanan dibatalkan
+        for (final item in order.items) {
+          if (item.productId.isNotEmpty && item.jumlah > 0) {
+            try {
+              final prodDoc = FirebaseFirestore.instance
+                  .collection('products')
+                  .doc(item.productId);
+              await FirebaseFirestore.instance.runTransaction((
+                transaction,
+              ) async {
+                final snapshot = await transaction.get(prodDoc);
+                if (snapshot.exists) {
+                  final currentStok =
+                      (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
+                  final newStok = (currentStok + item.jumlah)
+                      .clamp(0, 999999)
+                      .toInt();
+                  transaction.update(prodDoc, {'stok': newStok});
+                }
+              });
+            } catch (err) {
+              debugPrint('Gagal mengembalikan stok produk ${item.productId}: $err');
+            }
+          }
+        }
+
         await FirebaseFirestore.instance
             .collection('orders')
-            .doc(pesananId)
+            .doc(order.id)
             .update({
               'status': 'Dibatalkan',
               'updatedAt': FieldValue.serverTimestamp(),
@@ -564,7 +564,7 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                       children: [
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () => _batalkan(order.id, summary),
+                            onPressed: () => _batalkan(order, summary),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red,
                               side: const BorderSide(color: Colors.red),

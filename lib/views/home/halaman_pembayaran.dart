@@ -159,6 +159,32 @@ class _HalamanPembayaranState extends State<HalamanPembayaran> {
           .collection('orders')
           .add(order.toFirestore());
 
+      // 1b. Kurangi stok / porsi produk di database saat pesanan dibayar
+      for (final item in widget.items) {
+        if (item.productId.isNotEmpty && item.jumlah > 0) {
+          try {
+            final prodDoc = FirebaseFirestore.instance
+                .collection('products')
+                .doc(item.productId);
+            await FirebaseFirestore.instance.runTransaction((
+              transaction,
+            ) async {
+              final snapshot = await transaction.get(prodDoc);
+              if (snapshot.exists) {
+                final currentStok =
+                    (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
+                final newStok = (currentStok - item.jumlah)
+                    .clamp(0, 999999)
+                    .toInt();
+                transaction.update(prodDoc, {'stok': newStok});
+              }
+            });
+          } catch (err) {
+            debugPrint('Gagal update stok produk ${item.productId}: $err');
+          }
+        }
+      }
+
       // 2. Jika dipesan dari keranjang, hapus dokumen keranjang
       if (widget.isFromCart && widget.cartItemDocIds.isNotEmpty) {
         for (final cartId in widget.cartItemDocIds) {
