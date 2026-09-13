@@ -318,9 +318,6 @@ class RiwayatView extends StatelessWidget {
           itemBuilder: (context, index) {
             final order = historyOrders[index];
             final bool isSelesai = order.status.toLowerCase() == 'selesai';
-            final String summary = order.items.isNotEmpty
-                ? order.items.map((e) => e.namaProduk).join(', ')
-                : 'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}';
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
