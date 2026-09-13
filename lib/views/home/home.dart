@@ -8,7 +8,6 @@ import 'package:fodos/views/home/detail_makanan.dart';
 import 'package:fodos/views/home/halaman_favorit.dart';
 import 'package:fodos/views/home/halaman_keranjang.dart';
 import 'package:fodos/views/home/halaman_pilih_lokasi.dart';
-import 'package:fodos/views/home/tambah_produk.dart';
 import 'package:fodos/widgets/widget_carousel.dart';
 import 'package:fodos/widgets/widget_display_produk.dart';
 import 'package:fodos/widgets/widget_home.dart';
@@ -199,22 +198,6 @@ class _HomeFodosState extends State<HomeFodos> {
                             color: AppColors.primary,
                           ),
                           tooltip: 'Favorit Saya',
-                        ),
-                        IconButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const HalamanTambahProdukFodos(),
-                              ),
-                            );
-                          },
-                          icon: const Icon(
-                            Icons.add_circle_outline,
-                            color: AppColors.primary,
-                          ),
-                          tooltip: 'Tambah Produk',
                         ),
                         IconButton(
                           onPressed: () {

@@ -60,10 +60,10 @@ class _HalamanTambahProdukFodosState extends State<HalamanTambahProdukFodos> {
         createdAt: DateTime.now(),
       );
 
-      // 3. Simpan ke koleksi 'products' di Firebase Firestore menggunakan toJson()
+      // 3. Simpan ke koleksi 'products' di Firebase Firestore menggunakan toFirestore()
       await FirebaseFirestore.instance
           .collection('products')
-          .add(produkBaru.toJson());
+          .add(produkBaru.toFirestore());
 
       if (!mounted) return;
 

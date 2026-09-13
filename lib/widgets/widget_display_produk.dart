@@ -78,7 +78,7 @@ Widget displayProduk({
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
-                          "$sisaPorsi porsi tersisa",
+                          sisaPorsi == "0" ? "Habis" : "$sisaPorsi porsi tersisa",
                           style: const TextStyle(
                             color: AppColors.badgeText,
                             fontSize: 9,

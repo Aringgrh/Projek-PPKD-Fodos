@@ -61,6 +61,7 @@ class _DetailMakananState extends State<DetailMakanan> {
   @override
   void initState() {
     super.initState();
+    quantity = widget.produk.stok > 0 ? 1 : 0;
     _loadUserAndFavoriteStatus();
   }
 
@@ -352,7 +353,9 @@ class _DetailMakananState extends State<DetailMakanan> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '${widget.produk.stok} porsi tersisa',
+                              widget.produk.stok == 0
+                                  ? 'Habis'
+                                  : '${widget.produk.stok} porsi tersisa',
                               style: const TextStyle(
                                 color: AppColors.badgeText,
                                 fontSize: 12,
@@ -935,7 +938,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                   // "Tambah ke Keranjang" Button
                   Expanded(
                     child: OutlinedButton.icon(
-                      onPressed: _addToCart,
+                      onPressed: widget.produk.stok > 0 ? _addToCart : null,
                       icon: const Icon(
                         Icons.shopping_cart_outlined,
                         size: 18,
@@ -965,7 +968,7 @@ class _DetailMakananState extends State<DetailMakanan> {
                   // "Pesan Sekarang" Button
                   Expanded(
                     child: ElevatedButton.icon(
-                      onPressed: _pesanSekarang,
+                      onPressed: widget.produk.stok > 0 ? _pesanSekarang : null,
                       label: const Text(
                         'Pesan Sekarang',
                         style: TextStyle(

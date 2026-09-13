@@ -165,12 +165,21 @@ class ProductModelFirebase {
   factory ProductModelFirebase.fromMap(Map<String, dynamic> map) =>
       ProductModelFirebase.fromJson(map);
 
-  /// Mengonversi model ke Map JSON.
-  Map<String, dynamic> toJson() => _$ProductModelFirebaseToJson(this);
+  /// Mengonversi model ke Map JSON (Aman untuk SharedPreferences).
+  Map<String, dynamic> toJson() {
+    final map = _$ProductModelFirebaseToJson(this);
+    // Ubah Timestamp menjadi string ISO8601 agar aman saat di-encode JSON
+    if (map['createdAt'] is Timestamp) {
+      map['createdAt'] = (map['createdAt'] as Timestamp).toDate().toIso8601String();
+    } else if (map['createdAt'] is DateTime) {
+      map['createdAt'] = (map['createdAt'] as DateTime).toIso8601String();
+    }
+    return map;
+  }
 
   /// Mengonversi ke Map khusus penyimpanan dokumen Firestore (tanpa document ID).
   Map<String, dynamic> toFirestore() {
-    final map = toJson();
+    final map = _$ProductModelFirebaseToJson(this);
     map.remove('id');
     return map;
   }
