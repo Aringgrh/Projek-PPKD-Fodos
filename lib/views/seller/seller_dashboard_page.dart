@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/product_model.dart';
+import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/service/seller_service.dart';
+import 'package:fodos/views/home/bottom_nav.dart';
 
 class SellerDashboardPage extends StatefulWidget {
   const SellerDashboardPage({super.key});
@@ -540,7 +542,16 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
         ),
         actions: [
           TextButton.icon(
-            onPressed: () => context.pop(),
+            onPressed: () async {
+              await PreferenceHandler.setSellerMode(false);
+              if (context.mounted) {
+                if (Navigator.canPop(context)) {
+                  context.pop();
+                } else {
+                  context.pushAndRemoveAll(const BottomNavTugas12());
+                }
+              }
+            },
             icon: const Icon(Icons.swap_horiz, color: Colors.white, size: 18),
             label: const Text(
               'Mode Pembeli',
@@ -873,7 +884,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      order.orderId,
+                      'ID: #${order.orderId.length > 6 ? order.orderId.substring(0, 6).toUpperCase() : order.orderId.toUpperCase()}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
@@ -965,6 +976,34 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                         child: OutlinedButton(
                           onPressed: () async {
                             try {
+                              // Kembalikan stok / porsi produk di database saat pesanan ditolak
+                              final orderDoc = await FirebaseFirestore.instance.collection('orders').doc(order.orderId).get();
+                              if (orderDoc.exists && orderDoc.data() != null) {
+                                final data = orderDoc.data()!;
+                                final items = data['items'] as List<dynamic>? ?? [];
+                                for (final itemData in items) {
+                                  if (itemData is Map<String, dynamic>) {
+                                    final productId = itemData['productId'] as String? ?? '';
+                                    final jumlah = (itemData['jumlah'] as num?)?.toInt() ?? 0;
+                                    if (productId.isNotEmpty && jumlah > 0) {
+                                      try {
+                                        final prodDoc = FirebaseFirestore.instance.collection('products').doc(productId);
+                                        await FirebaseFirestore.instance.runTransaction((transaction) async {
+                                          final snapshot = await transaction.get(prodDoc);
+                                          if (snapshot.exists) {
+                                            final currentStok = (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
+                                            final newStok = (currentStok + jumlah).clamp(0, 999999).toInt();
+                                            transaction.update(prodDoc, {'stok': newStok});
+                                          }
+                                        });
+                                      } catch (e) {
+                                        debugPrint('Gagal mengembalikan stok $productId: $e');
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+
                               await FirebaseFirestore.instance
                                   .collection('orders')
                                   .doc(order.orderId)
