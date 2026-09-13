@@ -3,7 +3,7 @@ import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/preferencehandler.dart';
-import 'package:fodos/views/home/bottom_nav.dart';
+import 'package:fodos/widgets/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/views/seller/seller_dashboard_page.dart';
 import 'package:lottie/lottie.dart';
@@ -53,11 +53,17 @@ class _SplashScreenTugas12State extends State<SplashScreenTugas12> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(90),
                     color: Colors.black,
-                    image: DecorationImage(image: AssetImage(AppImages.logo), fit: BoxFit.fill),
+                    image: DecorationImage(
+                      image: AssetImage(AppImages.logo),
+                      fit: BoxFit.fill,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 40),
-                Lottie.asset("assets/lottie animations/loading (1).json", height: 160),
+                Lottie.asset(
+                  "assets/lottie animations/loading (1).json",
+                  height: 160,
+                ),
                 const SizedBox(height: 20),
               ],
             ),

@@ -123,23 +123,6 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                         color: AppColors.primary,
                       ),
                     ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(5),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.secondary,
-                          border: Border.all(color: Colors.white, width: 2),
-                        ),
-                        child: const Icon(
-                          Icons.verified,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                      ),
-                    ),
                   ],
                 ),
               ],
@@ -208,24 +191,6 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                             subtitle: _userStore != null
                                 ? "Dashboard Penjual (${_userStore!.namaToko})"
                                 : "Beralih ke Dashboard Penjual",
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                "POV Penjual",
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.primary,
-                                ),
-                              ),
-                            ),
                           )
                         : menuProfil(
                             onPressed: () async {
@@ -239,24 +204,6 @@ class _ProfileTugas12State extends State<ProfileTugas12> {
                             ),
                             title: "Mulai Berjualan",
                             subtitle: "Buka tokomu & jangkau pembeli Fodos",
-                            trailing: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.orange.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Text(
-                                "Buka Toko",
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.orange,
-                                ),
-                              ),
-                            ),
                           ),
                     const Divider(
                       height: 1,

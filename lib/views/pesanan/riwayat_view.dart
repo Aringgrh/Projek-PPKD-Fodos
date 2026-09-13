@@ -54,42 +54,35 @@ class RiwayatView extends StatelessWidget {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
               ),
-              title: Column(
-                children: [
-                  const Icon(
-                    Icons.stars_rounded,
-                    color: Colors.amber,
-                    size: 48,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Beri Penilaian & Ulasan',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Bagaimana pengalaman penyelamatan makanan Anda?',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppColors.textGrey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
+                    const Icon(
+                      Icons.stars_rounded,
+                      color: Colors.amber,
+                      size: 48,
+                    ),
                     const SizedBox(height: 8),
+                    const Text(
+                      'Beri Penilaian & Ulasan',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textDark,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Bagaimana pengalaman penyelamatan makanan Anda?',
+                      style: TextStyle(fontSize: 12, color: AppColors.textGrey),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
                     // Star Rating Picker
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Wrap(
+                      alignment: WrapAlignment.center,
                       children: List.generate(5, (index) {
                         final starValue = index + 1;
                         return IconButton(
@@ -324,20 +317,10 @@ class RiwayatView extends StatelessWidget {
           itemCount: historyOrders.length,
           itemBuilder: (context, index) {
             final order = historyOrders[index];
-            final firstItem = order.items.isNotEmpty
-                ? order.items.first
-                : OrderItemModel(
-                    productId: '',
-                    namaProduk:
-                        'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}',
-                    gambarUrl: '',
-                    harga: order.totalHarga,
-                  );
-
             final bool isSelesai = order.status.toLowerCase() == 'selesai';
-            final String summary = order.items.length > 1
-                ? "${firstItem.namaProduk} (+${order.items.length - 1} item lainnya)"
-                : firstItem.namaProduk;
+            final String summary = order.items.isNotEmpty
+                ? order.items.map((e) => e.namaProduk).join(', ')
+                : 'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}';
 
             return Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
@@ -396,56 +379,81 @@ class RiwayatView extends StatelessWidget {
                       ],
                     ),
                     const Divider(height: 18, color: AppColors.border),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Image Container
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            width: 70,
-                            height: 70,
-                            color: Colors.grey[200],
-                            child: _buildItemImage(firstItem.gambarUrl),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-
-                        // Title, Shop, Price details
-                        Expanded(
-                          child: Column(
+                    Column(
+                      children: order.items.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                summary,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: _buildItemImage(item.gambarUrl),
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (firstItem.namaToko.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  firstItem.namaToko,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textGrey,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 6),
-                              Text(
-                                "${order.totalItem} porsi • Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.secondary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.namaProduk,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textDark,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (item.namaToko.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.namaToko,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textGrey,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "${item.jumlah} porsi • Rp ${(item.harga * item.jumlah).toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.secondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const Divider(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total Tagihan',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textGrey,
+                          ),
+                        ),
+                        Text(
+                          "Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.secondary,
                           ),
                         ),
                       ],

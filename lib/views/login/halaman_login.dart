@@ -4,7 +4,7 @@ import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/auth_service.dart';
-import 'package:fodos/views/home/bottom_nav.dart';
+import 'package:fodos/widgets/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_lupa_password.dart';
 import 'package:fodos/views/login/halaman_pendaftaran.dart';
 import 'package:fodos/widgets/widget_login.dart';
@@ -59,13 +59,15 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'Gagal masuk dengan akun Google.';
       if (e.code == 'account-exists-with-different-credential') {
-        errorMessage = 'Akun email ini sudah terdaftar dengan metode masuk lain.';
+        errorMessage =
+            'Akun email ini sudah terdaftar dengan metode masuk lain.';
       } else if (e.code == 'invalid-credential') {
         errorMessage = 'Kredensial akun Google tidak valid.';
       } else if (e.code == 'user-disabled') {
         errorMessage = 'Akun Google ini telah dinonaktifkan di sistem.';
       } else if (e.code == 'network-request-failed') {
-        errorMessage = 'Gagal terhubung ke jaringan! Periksa koneksi internet Anda.';
+        errorMessage =
+            'Gagal terhubung ke jaringan! Periksa koneksi internet Anda.';
       } else if (e.message != null && e.message!.isNotEmpty) {
         errorMessage = e.message!;
       }
@@ -131,8 +133,7 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
       if (e.code == 'user-not-found') {
         errorMessage =
             'Pengguna tidak ditemukan! Silakan daftar terlebih dahulu.';
-      } else if (e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
+      } else if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         errorMessage = 'Email atau password salah!';
       } else if (e.code == 'invalid-email') {
         errorMessage = 'Format email tidak valid!';
@@ -524,4 +525,3 @@ class _HalamanLoginFodosState extends State<HalamanLoginFodos> {
     );
   }
 }
-

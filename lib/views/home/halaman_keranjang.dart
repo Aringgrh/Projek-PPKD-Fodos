@@ -91,7 +91,7 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
     }
   }
 
-  void _checkout(List<CartModel> cartItems) {
+  Future<void> _checkout(List<CartModel> cartItems) async {
     final selectedItems = cartItems
         .where((item) => selectedCartIds.contains(item.id))
         .toList();
@@ -105,6 +105,70 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
       );
       return;
     }
+
+    final firstShopName = selectedItems.first.namaToko;
+    final isDifferentShop = selectedItems.any((item) => item.namaToko != firstShopName);
+    
+    if (isDifferentShop) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap checkout produk dari toko yang sama dalam satu pesanan'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      for (var item in selectedItems) {
+        final doc = await FirebaseFirestore.instance.collection('products').doc(item.productId).get();
+        if (doc.exists) {
+          final product = ProductModel.fromFirestore(doc);
+          if (item.jumlah > product.stok) {
+            if (mounted) Navigator.pop(context);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Stok tidak cukup untuk produk ${item.namaProduk}. Tersisa ${product.stok}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+            return;
+          }
+        } else {
+           if (mounted) Navigator.pop(context);
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Produk ${item.namaProduk} tidak ditemukan'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+           }
+           return;
+        }
+      }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengecek stok: $e'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    if (mounted) Navigator.pop(context);
 
     final orderItems = selectedItems
         .map(
@@ -125,14 +189,16 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
         .where((id) => id.isNotEmpty)
         .toList();
 
-    context.push(
-      HalamanPembayaran(
-        items: orderItems,
-        namaToko: orderItems.first.namaToko,
-        isFromCart: true,
-        cartItemDocIds: cartDocIds,
-      ),
-    );
+    if (mounted) {
+      context.push(
+        HalamanPembayaran(
+          items: orderItems,
+          namaToko: orderItems.first.namaToko,
+          isFromCart: true,
+          cartItemDocIds: cartDocIds,
+        ),
+      );
+    }
   }
 
   Widget _buildItemImage(String image) {
@@ -329,8 +395,6 @@ class _HalamanKeranjangState extends State<HalamanKeranjang> {
                                   onTap: () {
                                     if (item.jumlah > 1) {
                                       _updateQuantity(item.id, item.jumlah - 1);
-                                    } else {
-                                      _deleteCartItem(item.id);
                                     }
                                   },
                                   borderRadius: BorderRadius.circular(20),

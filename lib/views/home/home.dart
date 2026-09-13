@@ -88,6 +88,7 @@ class _HomeFodosState extends State<HomeFodos> {
     return query.snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => ProductModel.fromFirestore(doc))
+          .where((produk) => produk.stok > 0)
           .toList();
     });
   }
@@ -97,15 +98,19 @@ class _HomeFodosState extends State<HomeFodos> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-
-              // Top App Bar / Location Section
-              Padding(
+          slivers: [
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              backgroundColor: AppColors.background,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              toolbarHeight: 70,
+              automaticallyImplyLeading: false,
+              titleSpacing: 0,
+              title: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -219,160 +224,175 @@ class _HomeFodosState extends State<HomeFodos> {
                   ],
                 ),
               ),
+            ),
+            SliverToBoxAdapter(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
 
-              // Hero Banner Slider
-              carouselGambar(),
+                  // Hero Banner Slider
+                  carouselGambar(),
 
-              // Category Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: const Text("Kategori", style: AppTextstyle.sectionTitle),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: categories.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(width: 10),
-                  itemBuilder: (context, index) {
-                    final cat = categories[index];
-                    return pilihanKategori(
-                      icon: cat["icon"],
-                      text: cat["name"],
-                      isSelected: selectedCategoryIndex == index,
-                      onTap: () {
-                        setState(() {
-                          selectedCategoryIndex = index;
-                        });
+                  // Category Section
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: const Text(
+                      "Kategori",
+                      style: AppTextstyle.sectionTitle,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 40,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: categories.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(width: 10),
+                      itemBuilder: (context, index) {
+                        final cat = categories[index];
+                        return pilihanKategori(
+                          icon: cat["icon"],
+                          text: cat["name"],
+                          isSelected: selectedCategoryIndex == index,
+                          onTap: () {
+                            setState(() {
+                              selectedCategoryIndex = index;
+                            });
+                          },
+                        );
                       },
-                    );
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Product Section Header ("Paling Diminati di Sekitarmu")
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        "Paling Diminati di Sekitarmu",
-                        style: AppTextstyle.sectionTitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
                     ),
-                    const SizedBox(width: 8),
-                    TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        "LIHAT SEMUA",
-                        style: TextStyle(
-                          color: AppColors.secondary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 11,
-                          letterSpacing: 0.5,
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Product Section Header ("Paling Diminati di Sekitarmu")
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            "Paling Diminati",
+                            style: AppTextstyle.sectionTitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {},
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            "LIHAT SEMUA",
+                            style: TextStyle(
+                              color: AppColors.secondary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              const SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
-              // Product Display Cards with StreamBuilder from Firestore
-              StreamBuilder<List<ProductModel>>(
-                stream: _streamProduk(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(32.0),
-                        child: CircularProgressIndicator(),
-                      ),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: Text('Gagal memuat produk: ${snapshot.error}'),
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Column(
-                          children: [
-                            Icon(
-                              Icons.storefront_outlined,
-                              size: 64,
-                              color: AppColors.textGrey.withValues(alpha: 0.5),
+                  // Product Display Cards with StreamBuilder from Firestore
+                  StreamBuilder<List<ProductModel>>(
+                    stream: _streamProduk(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(32.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Text(
+                              'Gagal memuat produk: ${snapshot.error}',
                             ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Belum ada produk untuk kategori ini.',
-                              style: TextStyle(
-                                color: AppColors.textGrey,
-                                fontSize: 13,
-                              ),
+                          ),
+                        );
+                      }
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.storefront_outlined,
+                                  size: 64,
+                                  color: AppColors.textGrey.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Belum ada produk untuk kategori ini.',
+                                  style: TextStyle(
+                                    color: AppColors.textGrey,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
+                          ),
+                        );
+                      }
 
-                  final listProduk = snapshot.data!;
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: listProduk.length,
-                    itemBuilder: (context, index) {
-                      final produk = listProduk[index];
-                      return displayProduk(
-                        image: produk.gambarUrl,
-                        namaMakanan: produk.namaProduk,
-                        namaToko: produk.namaToko,
-                        sisaPorsi: produk.stok.toString(),
-                        alamat: produk.alamatToko.isNotEmpty
-                            ? produk.alamatToko
-                            : 'Alamat toko belum diatur',
-                        harga:
-                            "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  DetailMakanan(produk: produk),
-                            ),
+                      final listProduk = snapshot.data!;
+                      return ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: listProduk.length,
+                        itemBuilder: (context, index) {
+                          final produk = listProduk[index];
+                          return displayProduk(
+                            image: produk.gambarUrl,
+                            namaMakanan: produk.namaProduk,
+                            namaToko: produk.namaToko,
+                            sisaPorsi: produk.stok.toString(),
+                            alamat: produk.alamatToko.isNotEmpty
+                                ? produk.alamatToko
+                                : 'Alamat toko belum diatur',
+                            harga:
+                                "Rp ${produk.harga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      DetailMakanan(produk: produk),
+                                ),
+                              );
+                            },
                           );
                         },
                       );
                     },
-                  );
-                },
-              ),
+                  ),
 
-              const SizedBox(height: 24),
-            ],
-          ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

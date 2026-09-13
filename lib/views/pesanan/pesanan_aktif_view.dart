@@ -439,20 +439,9 @@ class _PesananAktifViewState extends State<PesananAktifView> {
           itemCount: orders.length,
           itemBuilder: (context, index) {
             final order = orders[index];
-            final firstItem = order.items.isNotEmpty
-                ? order.items.first
-                : OrderItemModel(
-                    productId: '',
-                    namaProduk:
-                        'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}',
-                    gambarUrl: '',
-                    harga: order.totalHarga,
-                  );
-
-            final otherItemsCount = order.items.length - 1;
-            final summary = otherItemsCount > 0
-                ? '${firstItem.namaProduk} +$otherItemsCount menu lainnya'
-                : firstItem.namaProduk;
+            final summary = order.items.isNotEmpty 
+                ? order.items.map((e) => e.namaProduk).join(', ')
+                : 'Pesanan #${order.id.substring(0, 5.clamp(0, order.id.length))}';
 
             return Card(
               margin: const EdgeInsets.only(bottom: 14),
@@ -470,24 +459,31 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time_filled,
-                              size: 14,
-                              color: AppColors.secondary,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'ID: #${order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase()}',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textDark,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time_filled,
+                                size: 14,
+                                color: AppColors.secondary,
                               ),
-                            ),
-                          ],
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'ID: #${order.id.length > 6 ? order.id.substring(0, 6).toUpperCase() : order.id.toUpperCase()}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.textDark,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -509,55 +505,84 @@ class _PesananAktifViewState extends State<PesananAktifView> {
                       ],
                     ),
                     const Divider(height: 20),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: _buildItemImage(firstItem.gambarUrl),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
+                    Column(
+                      children: order.items.map((item) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                summary,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.textDark,
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child: SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: _buildItemImage(item.gambarUrl),
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              if (firstItem.namaToko.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  firstItem.namaToko,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textGrey,
-                                  ),
-                                ),
-                              ],
-                              const SizedBox(height: 6),
-                              Text(
-                                "${order.totalItem} porsi • Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: AppColors.secondary,
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.namaProduk,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.textDark,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    if (item.namaToko.isNotEmpty) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.namaToko,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textGrey,
+                                        ),
+                                      ),
+                                    ],
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      "${item.jumlah} porsi • Rp ${(item.harga * item.jumlah).toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppColors.secondary,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                        );
+                      }).toList(),
+                    ),
+                    const Divider(height: 8),
+                    Row(
+                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                       children: [
+                         const Text(
+                           'Total Tagihan',
+                           style: TextStyle(
+                             fontSize: 13,
+                             fontWeight: FontWeight.bold,
+                             color: AppColors.textGrey,
+                           ),
+                         ),
+                         Text(
+                           "Rp ${order.totalHarga.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}",
+                           style: const TextStyle(
+                             fontSize: 14,
+                             fontWeight: FontWeight.bold,
+                             color: AppColors.secondary,
+                           ),
+                         ),
+                       ],
                     ),
                     const SizedBox(height: 12),
                     Row(

@@ -4,7 +4,7 @@ import 'package:fodos/constants/app_images.dart';
 import 'package:fodos/constants/app_textstyle.dart';
 import 'package:fodos/extention/extention.dart';
 import 'package:fodos/service/auth_service.dart';
-import 'package:fodos/views/home/bottom_nav.dart';
+import 'package:fodos/widgets/bottom_nav.dart';
 import 'package:fodos/views/login/halaman_login.dart';
 import 'package:fodos/widgets/widget_login.dart';
 

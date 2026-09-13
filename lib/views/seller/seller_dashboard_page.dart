@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
@@ -6,7 +6,11 @@ import 'package:fodos/extention/extention.dart';
 import 'package:fodos/models/product_model.dart';
 import 'package:fodos/service/preferencehandler.dart';
 import 'package:fodos/service/seller_service.dart';
-import 'package:fodos/views/home/bottom_nav.dart';
+import 'package:fodos/widgets/bottom_nav.dart';
+import 'package:fodos/widgets/widget_seller_metric_card.dart';
+import 'package:fodos/widgets/widget_seller_info_tile.dart';
+import 'package:fodos/widgets/widget_seller_product_card.dart';
+import 'package:fodos/widgets/widget_seller_order_card.dart';
 
 class SellerDashboardPage extends StatefulWidget {
   const SellerDashboardPage({super.key});
@@ -60,13 +64,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
 
       if (store != null && store.namaToko.isNotEmpty) {
         _ordersSubscription?.cancel();
-        _ordersSubscription = SellerService.streamSellerOrders(store.namaToko).listen((newOrders) {
-          if (mounted) {
-            setState(() {
-              _incomingOrders = newOrders;
+        _ordersSubscription = SellerService.streamSellerOrders(store.namaToko)
+            .listen((newOrders) {
+              if (mounted) {
+                setState(() {
+                  _incomingOrders = newOrders;
+                });
+              }
             });
-          }
-        });
       }
     }
   }
@@ -125,12 +130,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Tambah Produk Baru',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
+                      const Expanded(
+                        child: Text(
+                          'Tambah Produk Baru',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -184,7 +191,7 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                               'Makanan Berat',
                               'Minuman',
                               'Cemilan & Snack',
-                              'Kue & Roti',
+                              'Roti',
                               'Fast Food',
                               'Kopi & Dessert',
                             ]
@@ -324,12 +331,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Edit Produk',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
+                      const Expanded(
+                        child: Text(
+                          'Edit Produk',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
                         ),
                       ),
                       IconButton(
@@ -581,14 +590,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
               children: [
                 Row(
                   children: [
-                    _buildMetricCard(
+                    widgetSellerMetricCard(
                       title: 'Pesanan Baru',
                       value: '$_newOrdersCount',
                       icon: Icons.shopping_bag_outlined,
                       color: Colors.orange,
                     ),
                     const SizedBox(width: 10),
-                    _buildMetricCard(
+                    widgetSellerMetricCard(
                       title: 'Diproses',
                       value: '$_inProcessCount',
                       icon: Icons.soup_kitchen_outlined,
@@ -599,14 +608,14 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    _buildMetricCard(
+                    widgetSellerMetricCard(
                       title: 'Selesai',
                       value: '$_completedCount',
                       icon: Icons.check_circle_outline,
                       color: Colors.green,
                     ),
                     const SizedBox(width: 10),
-                    _buildMetricCard(
+                    widgetSellerMetricCard(
                       title: 'Penjualan',
                       value: 'Rp ${_formatRupiah(_todaySalesTotal)}',
                       icon: Icons.payments_outlined,
@@ -713,102 +722,13 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
       itemCount: _sellerProducts.length,
       itemBuilder: (context, index) {
         final product = _sellerProducts[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-          elevation: 1.5,
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    product.gambarUrl,
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: 70,
-                      height: 70,
-                      color: Colors.grey[200],
-                      child: const Icon(
-                        Icons.fastfood,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.namaProduk,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Rp ${_formatRupiah(product.harga)} • Stok: ${product.stok}',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          product.kategori,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textGrey,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.edit_outlined,
-                        color: AppColors.primary,
-                      ),
-                      onPressed: () => _showEditProductBottomSheet(product),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.delete_outline,
-                        color: Colors.redAccent,
-                      ),
-                      onPressed: () async {
-                        await SellerService.deleteSellerProduct(product.id);
-                        _loadDashboardData();
-                      },
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+        return widgetSellerProductCard(
+          product: product,
+          onEdit: () => _showEditProductBottomSheet(product),
+          onDelete: () async {
+            await SellerService.deleteSellerProduct(product.id);
+            _loadDashboardData();
+          },
         );
       },
     );
@@ -846,367 +766,253 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
       itemCount: _incomingOrders.length,
       itemBuilder: (context, index) {
         final order = _incomingOrders[index];
-        final isNew =
-            order.status == 'Pesanan Baru' ||
-            order.status == 'Menunggu Konfirmasi';
-        final isAccepted = order.status == 'Diterima';
-        final isProcessing = order.status == 'Diproses';
+        return widgetSellerOrderCard(
+          context: context,
+          order: order,
+          onReject: () async {
+            try {
+              // Kembalikan stok / porsi produk di database saat pesanan ditolak
+              final orderDoc = await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .get();
+              if (orderDoc.exists && orderDoc.data() != null) {
+                final data = orderDoc.data()!;
+                final items = data['items'] as List<dynamic>? ?? [];
+                for (final itemData in items) {
+                  if (itemData is Map<String, dynamic>) {
+                    final productId = itemData['productId'] as String? ?? '';
+                    final jumlah = (itemData['jumlah'] as num?)?.toInt() ?? 0;
+                    if (productId.isNotEmpty && jumlah > 0) {
+                      try {
+                        final prodDoc = FirebaseFirestore.instance
+                            .collection('products')
+                            .doc(productId);
+                        await FirebaseFirestore.instance.runTransaction((
+                          transaction,
+                        ) async {
+                          final snapshot = await transaction.get(prodDoc);
+                          if (snapshot.exists) {
+                            final currentStok =
+                                (snapshot.data()?['stok'] as num?)?.toInt() ??
+                                0;
+                            final newStok = (currentStok + jumlah)
+                                .clamp(0, 999999)
+                                .toInt();
+                            transaction.update(prodDoc, {'stok': newStok});
+                          }
+                        });
+                      } catch (e) {
+                        debugPrint('Gagal mengembalikan stok $productId: $e');
+                      }
+                    }
+                  }
+                }
+              }
 
-        Color bgColor;
-        Color textColor;
-        if (order.status == 'Pesanan Baru' ||
-            order.status == 'Menunggu Konfirmasi') {
-          bgColor = Colors.orange.withValues(alpha: 0.15);
-          textColor = Colors.orange[800]!;
-        } else if (order.status == 'Ditolak' || order.status == 'Dibatalkan') {
-          bgColor = Colors.red.withValues(alpha: 0.15);
-          textColor = Colors.red[800]!;
-        } else if (order.status == 'Selesai' || order.status == 'Dikirim') {
-          bgColor = Colors.green.withValues(alpha: 0.15);
-          textColor = Colors.green[800]!;
-        } else {
-          bgColor = Colors.blue.withValues(alpha: 0.15);
-          textColor = Colors.blue[800]!;
-        }
+              await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .update({
+                    'status': 'Ditolak',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+              setState(() {
+                _incomingOrders[index] = SellerOrderModel(
+                  orderId: order.orderId,
+                  customerName: order.customerName,
+                  itemsSummary: order.itemsSummary,
+                  totalPrice: order.totalPrice,
+                  status: 'Ditolak',
+                  createdAt: order.createdAt,
+                );
+              });
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Gagal menolak pesanan: $e')),
+              );
+            }
+          },
+          onAccept: () async {
+            try {
+              await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .update({
+                    'status': 'Diterima',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+              setState(() {
+                _incomingOrders[index] = SellerOrderModel(
+                  orderId: order.orderId,
+                  customerName: order.customerName,
+                  itemsSummary: order.itemsSummary,
+                  totalPrice: order.totalPrice,
+                  status: 'Diterima',
+                  createdAt: order.createdAt,
+                );
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Pesanan ${order.orderId} telah diterima!'),
+                    backgroundColor: AppColors.primary,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              }
+            }
+          },
+          onProcess: () async {
+            try {
+              await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .update({
+                    'status': 'Diproses',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+              setState(() {
+                _incomingOrders[index] = SellerOrderModel(
+                  orderId: order.orderId,
+                  customerName: order.customerName,
+                  itemsSummary: order.itemsSummary,
+                  totalPrice: order.totalPrice,
+                  status: 'Diproses',
+                  createdAt: order.createdAt,
+                );
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Pesanan ${order.orderId} mulai diproses!'),
+                    backgroundColor: Colors.blue,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              }
+            }
+          },
+          onCancel: () async {
+            try {
+              final orderDoc = await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .get();
+              if (orderDoc.exists && orderDoc.data() != null) {
+                final data = orderDoc.data()!;
+                final items = data['items'] as List<dynamic>? ?? [];
+                for (final itemData in items) {
+                  if (itemData is Map<String, dynamic>) {
+                    final productId = itemData['productId'] as String? ?? '';
+                    final jumlah = (itemData['jumlah'] as num?)?.toInt() ?? 0;
+                    if (productId.isNotEmpty && jumlah > 0) {
+                      try {
+                        final prodDoc = FirebaseFirestore.instance
+                            .collection('products')
+                            .doc(productId);
+                        await FirebaseFirestore.instance.runTransaction((
+                          transaction,
+                        ) async {
+                          final snapshot = await transaction.get(prodDoc);
+                          if (snapshot.exists) {
+                            final currentStok =
+                                (snapshot.data()?['stok'] as num?)?.toInt() ??
+                                0;
+                            final newStok = (currentStok + jumlah)
+                                .clamp(0, 999999)
+                                .toInt();
+                            transaction.update(prodDoc, {'stok': newStok});
+                          }
+                        });
+                      } catch (e) {
+                        debugPrint('Gagal mengembalikan stok $productId: $e');
+                      }
+                    }
+                  }
+                }
+              }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'ID: #${order.orderId.length > 6 ? order.orderId.substring(0, 6).toUpperCase() : order.orderId.toUpperCase()}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: bgColor,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        order.status,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 20),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.person_outline,
-                      size: 18,
-                      color: AppColors.textGrey,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      order.customerName,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.restaurant,
-                      size: 18,
-                      color: AppColors.textGrey,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        order.itemsSummary,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Total Pesanan:',
-                      style: TextStyle(fontSize: 12, color: AppColors.textGrey),
-                    ),
-                    Text(
-                      'Rp ${_formatRupiah(order.totalPrice)}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ],
-                ),
-                if (isNew) ...[
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            try {
-                              // Kembalikan stok / porsi produk di database saat pesanan ditolak
-                              final orderDoc = await FirebaseFirestore.instance.collection('orders').doc(order.orderId).get();
-                              if (orderDoc.exists && orderDoc.data() != null) {
-                                final data = orderDoc.data()!;
-                                final items = data['items'] as List<dynamic>? ?? [];
-                                for (final itemData in items) {
-                                  if (itemData is Map<String, dynamic>) {
-                                    final productId = itemData['productId'] as String? ?? '';
-                                    final jumlah = (itemData['jumlah'] as num?)?.toInt() ?? 0;
-                                    if (productId.isNotEmpty && jumlah > 0) {
-                                      try {
-                                        final prodDoc = FirebaseFirestore.instance.collection('products').doc(productId);
-                                        await FirebaseFirestore.instance.runTransaction((transaction) async {
-                                          final snapshot = await transaction.get(prodDoc);
-                                          if (snapshot.exists) {
-                                            final currentStok = (snapshot.data()?['stok'] as num?)?.toInt() ?? 0;
-                                            final newStok = (currentStok + jumlah).clamp(0, 999999).toInt();
-                                            transaction.update(prodDoc, {'stok': newStok});
-                                          }
-                                        });
-                                      } catch (e) {
-                                        debugPrint('Gagal mengembalikan stok $productId: $e');
-                                      }
-                                    }
-                                  }
-                                }
-                              }
-
-                              await FirebaseFirestore.instance
-                                  .collection('orders')
-                                  .doc(order.orderId)
-                                  .update({
-                                'status': 'Ditolak',
-                                'updatedAt': FieldValue.serverTimestamp(),
-                              });
-                              setState(() {
-                                _incomingOrders[index] = SellerOrderModel(
-                                  orderId: order.orderId,
-                                  customerName: order.customerName,
-                                  itemsSummary: order.itemsSummary,
-                                  totalPrice: order.totalPrice,
-                                  status: 'Ditolak',
-                                  createdAt: order.createdAt,
-                                );
-                              });
-                            } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Gagal menolak pesanan: $e')),
-                              );
-                            }
-                          },
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Colors.red),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'Tolak',
-                            style: TextStyle(color: Colors.red),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            try {
-                              await FirebaseFirestore.instance
-                                  .collection('orders')
-                                  .doc(order.orderId)
-                                  .update({
-                                'status': 'Diterima',
-                                'updatedAt': FieldValue.serverTimestamp(),
-                              });
-                              setState(() {
-                                _incomingOrders[index] = SellerOrderModel(
-                                  orderId: order.orderId,
-                                  customerName: order.customerName,
-                                  itemsSummary: order.itemsSummary,
-                                  totalPrice: order.totalPrice,
-                                  status: 'Diterima',
-                                  createdAt: order.createdAt,
-                                );
-                              });
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Pesanan ${order.orderId} telah diterima!',
-                                    ),
-                                    backgroundColor: AppColors.primary,
-                                  ),
-                                );
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Gagal: $e')),
-                                );
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: const Text(
-                            'Terima Pesanan',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
+              await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .update({
+                    'status': 'Dibatalkan',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+              setState(() {
+                _incomingOrders[index] = SellerOrderModel(
+                  orderId: order.orderId,
+                  customerName: order.customerName,
+                  itemsSummary: order.itemsSummary,
+                  totalPrice: order.totalPrice,
+                  status: 'Dibatalkan',
+                  createdAt: order.createdAt,
+                );
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Pesanan ${order.orderId} telah dibatalkan'),
+                    backgroundColor: Colors.red,
                   ),
-                ],
-                if (isAccepted) ...[
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await FirebaseFirestore.instance
-                              .collection('orders')
-                              .doc(order.orderId)
-                              .update({
-                            'status': 'Diproses',
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          });
-                          setState(() {
-                            _incomingOrders[index] = SellerOrderModel(
-                              orderId: order.orderId,
-                              customerName: order.customerName,
-                              itemsSummary: order.itemsSummary,
-                              totalPrice: order.totalPrice,
-                              status: 'Diproses',
-                              createdAt: order.createdAt,
-                            );
-                          });
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Pesanan ${order.orderId} mulai diproses!',
-                                ),
-                                backgroundColor: Colors.blue,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Gagal: $e')),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Proses Pesanan',
-                        style: TextStyle(color: Colors.white),
-                      ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              }
+            }
+          },
+          onComplete: () async {
+            try {
+              await FirebaseFirestore.instance
+                  .collection('orders')
+                  .doc(order.orderId)
+                  .update({
+                    'status': 'Selesai',
+                    'updatedAt': FieldValue.serverTimestamp(),
+                  });
+              setState(() {
+                _incomingOrders[index] = SellerOrderModel(
+                  orderId: order.orderId,
+                  customerName: order.customerName,
+                  itemsSummary: order.itemsSummary,
+                  totalPrice: order.totalPrice,
+                  status: 'Selesai',
+                  createdAt: order.createdAt,
+                );
+              });
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Pesanan ${order.orderId} telah diselesaikan!',
                     ),
+                    backgroundColor: Colors.green,
                   ),
-                ],
-                if (isProcessing) ...[
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () async {
-                        try {
-                          await FirebaseFirestore.instance
-                              .collection('orders')
-                              .doc(order.orderId)
-                              .update({
-                            'status': 'Selesai',
-                            'updatedAt': FieldValue.serverTimestamp(),
-                          });
-                          setState(() {
-                            _incomingOrders[index] = SellerOrderModel(
-                              orderId: order.orderId,
-                              customerName: order.customerName,
-                              itemsSummary: order.itemsSummary,
-                              totalPrice: order.totalPrice,
-                              status: 'Selesai',
-                              createdAt: order.createdAt,
-                            );
-                          });
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Pesanan ${order.orderId} telah diselesaikan!',
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Gagal: $e')),
-                            );
-                          }
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: const Text(
-                        'Selesaikan Pesanan',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+              }
+            }
+          },
         );
       },
     );
@@ -1228,19 +1034,19 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
             ),
             child: Column(
               children: [
-                _buildInfoTile(
+                widgetSellerInfoTile(
                   icon: Icons.storefront,
                   title: 'Nama Toko',
                   subtitle: _store?.namaToko ?? '-',
                 ),
                 const Divider(),
-                _buildInfoTile(
+                widgetSellerInfoTile(
                   icon: Icons.category_outlined,
                   title: 'Kategori Utama',
                   subtitle: _store?.kategori ?? '-',
                 ),
                 const Divider(),
-                _buildInfoTile(
+                widgetSellerInfoTile(
                   icon: Icons.location_on_outlined,
                   title: 'Alamat Toko',
                   subtitle: _store?.alamatToko ?? '-',
@@ -1273,86 +1079,6 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.03),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 22),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 10, color: AppColors.textGrey),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      children: [
-        Icon(icon, color: AppColors.primary, size: 22),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 11, color: AppColors.textGrey),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 
