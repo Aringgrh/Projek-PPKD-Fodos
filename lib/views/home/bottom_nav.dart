@@ -4,7 +4,6 @@ import 'package:fodos/views/home/home.dart';
 import 'package:fodos/views/pesanan/pesanan.dart';
 import 'package:fodos/views/profile/profile.dart';
 import 'package:fodos/views/search/search.dart';
-import 'package:google_nav_bar/google_nav_bar.dart';
 
 class BottomNavTugas12 extends StatefulWidget {
   final int initialIndex;
@@ -34,43 +33,36 @@ class _BottomNavTugas12State extends State<BottomNavTugas12> {
     PesananTugas12(),
     ProfileTugas12(),
   ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      bottomNavigationBar: GNav(
-        rippleColor: AppColors.secondary,
-        onTabChange: (value) {
-          changeBottom(value);
-        },
-        selectedIndex: pilihan,
-        tabs: [
-          GButton(
-            icon: Icons.home_outlined,
-            iconActiveColor: Colors.white,
-            text: ("Beranda"),
-            textColor: Colors.white,
-            backgroundColor: AppColors.secondary,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: pilihan,
+        onTap: changeBottom,
+        selectedItemColor: AppColors.secondary,
+        unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Beranda',
           ),
-          GButton(
-            icon: Icons.search,
-            iconActiveColor: Colors.white,
-            text: ("Pencarian"),
-            textColor: Colors.white,
-            backgroundColor: AppColors.secondary,
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            activeIcon: Icon(Icons.search),
+            label: 'Pencarian',
           ),
-          GButton(
-            icon: Icons.shopping_bag_outlined,
-            iconActiveColor: Colors.white,
-            text: ("Pesanan"),
-            textColor: Colors.white,
-            backgroundColor: AppColors.secondary,
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_bag_outlined),
+            activeIcon: Icon(Icons.shopping_bag),
+            label: 'Pesanan',
           ),
-          GButton(
-            icon: Icons.person_outline,
-            iconActiveColor: Colors.white,
-            text: ("Pengaturan"),
-            textColor: Colors.white,
-            backgroundColor: AppColors.secondary,
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            activeIcon: Icon(Icons.person),
+            label: 'Pengaturan',
           ),
         ],
       ),
