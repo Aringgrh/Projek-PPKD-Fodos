@@ -374,6 +374,12 @@ class SellerService {
   /// Menghapus produk penjual
   static Future<void> deleteSellerProduct(String productId) async {
     try {
+      try {
+        await FirebaseFirestore.instance.collection('products').doc(productId).delete();
+      } catch (e) {
+        debugPrint("Firestore delete product warning: $e");
+      }
+
       final list = await getSellerProducts();
       list.removeWhere((p) => p.id == productId);
 

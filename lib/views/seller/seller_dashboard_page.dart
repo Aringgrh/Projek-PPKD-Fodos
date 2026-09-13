@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:fodos/constants/app_textstyle.dart';
@@ -725,9 +725,57 @@ class _SellerDashboardPageState extends State<SellerDashboardPage>
         return widgetSellerProductCard(
           product: product,
           onEdit: () => _showEditProductBottomSheet(product),
-          onDelete: () async {
-            await SellerService.deleteSellerProduct(product.id);
-            _loadDashboardData();
+          onDelete: () {
+            showDialog(
+              context: context,
+              builder: (BuildContext dialogContext) {
+                return AlertDialog(
+                  title: const Text('Konfirmasi Hapus'),
+                  content: Text('Apakah Anda yakin ingin menghapus produk "${product.namaProduk}"?'),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.pop(dialogContext);
+                      },
+                      child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        Navigator.pop(dialogContext);
+                        try {
+                          await SellerService.deleteSellerProduct(product.id);
+                          _loadDashboardData();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Produk berhasil dihapus'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Gagal menghapus produk: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                      ),
+                      child: const Text('Hapus', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                );
+              },
+            );
           },
         );
       },
